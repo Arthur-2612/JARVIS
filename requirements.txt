@@ -1,0 +1,7 @@
+SpeechRecognition
+PyAudio
+edge-tts
+pyttsx3
+playsound==1.2.2
+sounddevice
+numpy
