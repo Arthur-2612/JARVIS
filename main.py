@@ -11,14 +11,6 @@ Fluxo v3 (modo contínuo + anti-eco):
   5. Campo de texto sempre disponível como fallback.
   6. Botão 'Detectar Microfone' na GUI permite trocar o device em tempo real.
 """
-  2. Calibra o microfone (2 s de ruído ambiente).
-  3. Fala uma saudação.
-  4. Loop contínuo: ouve o microfone sem precisar chamar pelo nome.
-     Qualquer fala reconhecida é interpretada e executada imediatamente.
-  5. Diz "Jarvis" ainda funciona para chamar a atenção quando pausado.
-  6. Campo de texto sempre disponível como fallback.
-  7. Botão "Detectar Microfone" na GUI permite trocar o device em tempo real.
-"""
 
 import json
 import threading

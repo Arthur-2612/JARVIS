@@ -10,7 +10,7 @@
   },
 
   "comportamento": {
-    "saudacao_ao_iniciar": "Sistemas online. Bom dia, senhor. Estou pronto para ajudar.",
+    "saudacao_ao_iniciar": "E aí! Jarvis online. Tô aqui pra te ajudar no que precisar!",
     "tempo_limite_escuta_segundos": 5,
     "tempo_limite_frase_segundos": 10,
     "usar_palmas_como_gatilho_alternativo": false,
