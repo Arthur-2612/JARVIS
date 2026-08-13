@@ -1,14 +1,15 @@
 """
-Cérebro do JARVIS v3 — tom de amigo + modo contínuo.
+Cérebro do JARVIS v5 — assistente virtual inteligente completo.
 
-- Respostas variadas e casuais como um amigo que ajuda.
-- Normalização de texto (sem acentos) para tolerar variações.
-- Filtro de ruído antes de processar (evita reagir a som ambiente curto).
+- Responde curiosidades gerais e perguntas sobre quase tudo (Wikipédia API + banco de dados).
+- Suporte a desligamento instantâneo por qualquer palavra relacionada ('desligar', 'desliga', 'encerrar', 'tchau', 'fechar', etc.).
+- Suporte a todos os apps e sites do config.json.
+- Fallback inteligente com pesquisa automática quando necessário.
 """
 
 import random
 import unicodedata
-from core import acoes
+from core import acoes, conhecimento
 
 
 # ---------------------------------------------------------------------------
@@ -25,44 +26,49 @@ def _normalizar(texto: str) -> str:
 # Palavras-chave (já normalizadas, sem acento)
 # ---------------------------------------------------------------------------
 
+PALAVRAS_SAIR     = [
+    "desligar", "desliga", "desligue", "encerrar", "encerra", "fechar", "fecha",
+    "sair", "tchau", "ate logo", "desligar jarvis", "encerrar jarvis",
+    "fechar jarvis", "pode desligar", "desligar tudo", "apagar",
+    "desativa", "desativar", "parar jarvis", "desligar o jarvis",
+    "fechar o jarvis", "desliga o jarvis", "fim", "desligando"
+]
+
 PALAVRAS_PAUSAR   = ["pausar", "pare de ouvir", "descansar", "fique quieto",
-                     "para de ouvir", "silencio", "chega"]
-PALAVRAS_SAIR     = ["encerrar jarvis", "desligar jarvis", "fechar jarvis",
-                     "sair jarvis", "tchau jarvis", "ate logo jarvis"]
+                     "para de ouvir", "silencio", "chega", "pausa"]
+
 PALAVRAS_ABRIR    = ["abrir", "abra", "abre", "iniciar", "inicia",
-                     "lancar", "lanca", "abrir aba", "abre aba"]
+                     "lancar", "lanca", "abrir aba", "abre aba", "entrar", "entra",
+                     "acessar", "acesse", "vai pro", "vai para"]
+
 PALAVRAS_PESQUISA = ["pesquisar", "pesquise", "buscar", "busque",
                      "procurar", "procure", "googlar", "googla"]
+
+PALAVRAS_CURIOSIDADE = [
+    "curiosidade", "curiosidades", "sabia que", "fato curioso",
+    "me conta algo", "me ensina algo", "uma curiosidade",
+    "conta uma curiosidade", "fala uma curiosidade", "sabe de algo legal"
+]
+
 PALAVRAS_HORAS    = ["que horas sao", "que horas", "horas sao",
                      "me diz a hora", "hora atual", "horas"]
+
 PALAVRAS_DATA     = ["que dia", "data de hoje", "qual e a data",
                      "dia de hoje", "que data e hoje"]
+
 PALAVRAS_NOTICIAS = ["noticias", "novidades", "ultimas noticias", "noticia"]
+
 PALAVRAS_CLIMA    = ["clima", "tempo", "previsao do tempo",
                      "vai chover", "temperatura", "como ta o tempo"]
+
 PALAVRAS_PIADA    = ["conta uma piada", "me conta uma piada", "piada",
                      "me faz rir", "fala algo engraçado"]
 
-# Saudações que o JARVIS pode receber (responde de forma amigável)
 PALAVRAS_SAUDACAO = ["ola", "oi", "e ai", "salve", "fala", "bom dia",
                      "boa tarde", "boa noite", "tudo bem", "tudo bom",
                      "como voce esta", "como vai"]
 
-# Comprimentos mínimos para não reagir a ruídos curtos (ex: "ah", "oi")
-MIN_PALAVRAS = 1   # aceita até 1 palavra (ex: "horas")
-
-
-# ---------------------------------------------------------------------------
-# Respostas variadas — tom de amigo
-# ---------------------------------------------------------------------------
-
-FALLBACK = [
-    "Hmm, não entendi muito bem. Pode falar de outro jeito?",
-    "Eita, essa eu não peguei. Repete aí?",
-    "Opa, pode repetir? Acho que não ouvi direito.",
-    "Não tô entendendo não, mano. Fala de novo?",
-    "Que foi? Não captei. Tenta de outra forma!",
-]
+MIN_PALAVRAS = 1
 
 SAUDACOES_RESPOSTA = [
     "Oi! Tô aqui, pode falar!",
@@ -96,53 +102,54 @@ def _comeca_com(norm: str, lista: list) -> bool:
 
 def processar_comando(texto: str, config: dict) -> str:
     if not texto:
-        return random.choice(FALLBACK)
+        return ""
 
     norm = _normalizar(texto)
 
-    # Ignora fragmentos muito curtos que provavelmente são ruído
     palavras = [p for p in norm.split() if len(p) > 1]
     if len(palavras) < MIN_PALAVRAS:
-        return ""   # string vazia = silêncio, main.py não fala nada
+        return ""
 
-    # ── Saudações ────────────────────────────────────────────────────────
-    # Verifica se o texto É basicamente uma saudação (poucos tokens)
-    if len(palavras) <= 4 and _contem(norm, PALAVRAS_SAUDACAO):
-        return random.choice(SAUDACOES_RESPOSTA)
+    # ── 1. Desligamento prioritário ('desligar', 'encerrar', 'tchau', etc.) ──
+    for termo_sair in PALAVRAS_SAIR:
+        if norm == termo_sair or f" {termo_sair} " in f" {norm} " or norm.startswith(termo_sair):
+            return "__SAIR__"
 
-    # ── YouTube (regra prioritária — evita cair no "abrir" depois) ────────
-    if "youtube" in norm:
-        return acoes.abrir_youtube(texto)
-
-    # ── Sair ──────────────────────────────────────────────────────────────
-    if _contem(norm, PALAVRAS_SAIR):
-        return "__SAIR__"
-
-    # ── Pausar ────────────────────────────────────────────────────────────
+    # ── 2. Pausar escuta ──────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_PAUSAR):
         return "__PAUSAR__"
 
-    # ── Piada ─────────────────────────────────────────────────────────────
+    # ── 3. Curiosidades ───────────────────────────────────────────────────
+    if _contem(norm, PALAVRAS_CURIOSIDADE):
+        return conhecimento.obter_curiosidade()
+
+    # ── 4. Piadas ─────────────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_PIADA):
         return random.choice(PIADAS)
 
-    # ── Horas ─────────────────────────────────────────────────────────────
+    # ── 5. Horas e Data ───────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_HORAS):
         return acoes.dizer_horas()
 
-    # ── Data ──────────────────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_DATA):
         return acoes.dizer_data()
 
-    # ── Notícias ──────────────────────────────────────────────────────────
+    # ── 6. Notícias e Clima ───────────────────────────────────────────────
     if _contem(norm, PALAVRAS_NOTICIAS):
         return acoes.abrir_noticias()
 
-    # ── Clima ─────────────────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_CLIMA):
         return acoes.abrir_clima()
 
-    # ── Pesquisa no Google ────────────────────────────────────────────────
+    # ── 7. Saudações ──────────────────────────────────────────────────────
+    if len(palavras) <= 3 and _contem(norm, PALAVRAS_SAUDACAO):
+        return random.choice(SAUDACOES_RESPOSTA)
+
+    # ── 8. YouTube ────────────────────────────────────────────────────────
+    if "youtube" in norm:
+        return acoes.abrir_youtube(texto)
+
+    # ── 9. Pesquisa explícita ─────────────────────────────────────────────
     if _comeca_com(norm, PALAVRAS_PESQUISA) or "no google" in norm or "no bing" in norm:
         termo = norm
         for p in sorted(PALAVRAS_PESQUISA, key=len, reverse=True):
@@ -155,17 +162,29 @@ def processar_comando(texto: str, config: dict) -> str:
                  .replace("google", "")
                  .strip()
         )
-        return acoes.pesquisar_google(termo)
+        if termo:
+            return acoes.pesquisar_google(termo)
 
-    # ── Abrir aplicativo ──────────────────────────────────────────────────
+    # ── 10. Aplicativos e sites do config.json ────────────────────────────
+    apps = config.get("apps", {})
+    nome_app = acoes.extrair_nome_app(norm, apps)
+    if not nome_app:
+        nome_app = acoes.extrair_nome_app(texto.lower(), apps)
+
+    if nome_app:
+        return acoes.abrir_app(nome_app, apps)
+
     if _contem(norm, PALAVRAS_ABRIR):
-        apps = config.get("apps", {})
-        nome_app = acoes.extrair_nome_app(norm, apps)
-        if not nome_app:
-            nome_app = acoes.extrair_nome_app(texto.lower(), apps)
-        if nome_app:
-            return acoes.abrir_app(nome_app, apps)
         return "Cara, não achei esse app na minha lista. Dá pra adicionar no config.json!"
 
-    # ── Fallback ──────────────────────────────────────────────────────────
-    return random.choice(FALLBACK)
+    # ── 11. Perguntas gerais e conhecimentos (Wikipédia / Inteligência) ────
+    resposta_conhecimento = conhecimento.responder_pergunta(texto)
+    if resposta_conhecimento:
+        return resposta_conhecimento
+
+    # Se a frase parecer uma pergunta ("o que", "quem", "como", "onde", "por que", "?"), pesquisa automaticamente
+    if any(q in norm for q in ["o que", "quem", "como", "onde", "por que", "qual", "quanto"]):
+        return acoes.pesquisar_google(texto)
+
+    # ── Fallback amigável ─────────────────────────────────────────────────
+    return "Eu tô aqui! Pode me perguntar qualquer curiosidade, pedir pra abrir um site ou me mandar pesquisar!"

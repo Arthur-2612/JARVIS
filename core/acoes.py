@@ -1,14 +1,14 @@
 """
 Ações que o JARVIS pode executar no computador.
 
-Correções v3:
-- abrir_youtube: filtra palavras de comando (jarvis, abrir, abra, etc.)
-  para não virar termo de busca acidental. Se o restante for vazio,
-  apenas abre o YouTube sem buscar — sem duplicar a ação.
-- Tom amigável em todas as respostas.
+Melhorias v4:
+- Suporte a aliases e sinônimos estendidos (email, chat gpt, zap, insta, etc.).
+- Verificação inteligente de executáveis em disco antes de subprocess.
+- Respostas amigáveis e descontraídas.
 """
 
 import datetime
+import os
 import subprocess
 import unicodedata
 import urllib.parse
@@ -21,9 +21,51 @@ PALAVRAS_RUIDO = {
     # ação
     "abrir", "abra", "abre", "abrir aba", "abre aba", "iniciar", "inicia",
     "tocar", "toca", "ligar", "liga", "mostrar", "mostra", "colocar", "coloca",
+    "entra", "entrar", "vai", "ir", "acessar", "acesse",
     # ligação
     "pesquisar", "buscar", "procurar", "por", "de", "o", "a", "no", "na",
     "um", "uma", "os", "as", "me", "mim", "para", "pra", "e", "em",
+}
+
+# Mapeamento estendido de sinônimos/aliases para chaves padrão
+ALIASES_CUSTOM = {
+    "email": "email",
+    "e-mail": "e-mail",
+    "correio": "email",
+    "correio eletronico": "email",
+    "chat gpt": "chat gpt",
+    "chatgpt": "chatgpt",
+    "gpt": "gpt",
+    "zap": "zap",
+    "whats": "whats",
+    "whatsapp": "whatsapp",
+    "insta": "insta",
+    "instagram": "instagram",
+    "face": "face",
+    "facebook": "facebook",
+    "musica": "musica",
+    "spotify": "spotify",
+    "navegador": "navegador",
+    "internet": "internet",
+    "bloco de notas": "bloco de notas",
+    "bloco de nota": "bloco de nota",
+    "notepad": "notepad",
+    "calculadora": "calculadora",
+    "calc": "calc",
+    "explorer": "explorer",
+    "meus arquivos": "meus arquivos",
+    "pastas": "pastas",
+    "pasta": "pasta",
+    "configuracao": "configuracao",
+    "configuracoes": "configuracoes",
+    "prime": "prime",
+    "amazon prime": "amazon prime",
+    "planilha": "planilha",
+    "planilhas": "planilhas",
+    "slides": "slides",
+    "apresentacao": "apresentacao",
+    "docs": "docs",
+    "documento": "docs",
 }
 
 
@@ -46,14 +88,19 @@ def abrir_item(item: dict) -> bool:
     valor = item.get("value")
     try:
         if tipo == "path":
-            subprocess.Popen([valor])
+            if os.path.exists(valor):
+                subprocess.Popen([valor])
+                return True
+            else:
+                print(f"[acoes] Executável não encontrado em: {valor}")
+                return False
         elif tipo == "command":
             subprocess.Popen(valor, shell=True)
+            return True
         elif tipo == "url":
             webbrowser.open(valor)
-        else:
-            return False
-        return True
+            return True
+        return False
     except Exception as e:
         print(f"[acoes] Erro ao abrir '{valor}': {e}")
         return False
@@ -66,31 +113,48 @@ def abrir_app(nome: str, apps_config: dict) -> str:
     ok = abrir_item(item)
     if ok:
         return f"Abrindo {nome} pra você!"
+    
+    # Se falhou um caminho em disco (ex: app não instalado), verifica se há URL fallback
+    if item.get("type") == "path":
+        nome_url = f"{nome} web"
+        if nome_url in apps_config:
+            abrir_item(apps_config[nome_url])
+            return f"Não achei o aplicativo instalado, então abri a versão web do {nome}!"
+
     return f"Eita, não consegui abrir o {nome}. Verifica o caminho no config.json."
 
 
-def extrair_nome_app(texto: str, apps_config: dict):
-    """Encontra qual app foi mencionado, tolerando acentos."""
+def extrair_nome_app(texto: str, apps_config: dict) -> str | None:
+    """
+    Encontra qual app configurado foi mencionado no texto reconhecido.
+    Testa tanto chaves diretas quanto aliases e normalização sem acentos.
+    """
     texto_norm = _normalizar(texto)
-    for nome_app in sorted(apps_config.keys(), key=len, reverse=True):
-        if nome_app in texto or _normalizar(nome_app) in texto_norm:
+
+    # 1. Busca por chaves do config.json ordenadas pelo tamanho (maiores primeiro)
+    chaves_ordenadas = sorted(apps_config.keys(), key=len, reverse=True)
+    for nome_app in chaves_ordenadas:
+        nome_norm = _normalizar(nome_app)
+        # Verifica se o nome aparece como palavra exata ou subfrase
+        if f" {nome_norm} " in f" {texto_norm} " or nome_norm == texto_norm:
             return nome_app
+
+    # 2. Busca permissiva (contém no texto)
+    for nome_app in chaves_ordenadas:
+        nome_norm = _normalizar(nome_app)
+        if len(nome_norm) >= 3 and nome_norm in texto_norm:
+            return nome_app
+
     return None
 
 
 # ---------------------------------------------------------------------------
-# YouTube  ← correção principal da aba dupla
+# YouTube
 # ---------------------------------------------------------------------------
 
 def abrir_youtube(texto: str) -> str:
-    """
-    Abre o YouTube. Se houver um termo de busca real (depois de filtrar
-    palavras de ruído/comando), abre com a busca. Caso contrário, apenas
-    abre a página inicial — uma única ação, sem duplicar.
-    """
     norm = _normalizar(texto)
 
-    # Remove a palavra "youtube" e tudo que é ruído/comando
     palavras = [
         p for p in norm.split()
         if p not in PALAVRAS_RUIDO and p != "youtube"
