@@ -1,247 +1,326 @@
 """
-Interface HUD Premium do JARVIS v4.
+Interface HUD Premium do JARVIS v4 - Ultra High-Definition & Smooth UI.
 
-Design sci-fi de alta fidelidade com:
+Design sci-fi modernizado de alta fidelidade com:
+- Suporte a High-DPI Awareness (sem pixels borrados/esticados no Windows).
+- Arc-Reactor HD com renderização vetorial suave, aura de brilho e geometria hexagonal.
+- Anéis de energia com rotação dinâmica e partículas orbitais.
+- Efeitos visuais de hover interativos e alteração de foco.
 - Suporte a TELA CHEIA (Fullscreen F11 ou botão ⛶ TELA CHEIA).
-- Dimensionamento dinâmico do Arc-Reactor central em qualquer resolução.
-- Grade holográfica animada responsiva.
-- Anel externo que pulsa em azul/ciano quando OUVINDO.
-- Badge de status animado com cores semânticas.
-- Painel de diagnóstico de microfone.
-- Log de conversa com cores diferenciadas por falante.
-- Campo de entrada estilizado com ícone de microfone.
+- Log de conversa estilizado com tags coloridas por falante.
+- Painel de controle de microfone e entrada manual responsiva.
 """
 
+import sys
+import os
 import queue
 import math
-import threading
+import time
+import ctypes
 import tkinter as tk
 from tkinter import font as tkfont
-import time
 
-# ── Paleta de cores ──────────────────────────────────────────────────────────
-BG          = "#03070a"       # quase preto com leve tint azul
-BG2         = "#060d12"       # levemente mais claro para painéis
-CYAN        = "#00e5ff"       # ciano principal
-CYAN_DIM    = "#00617a"       # ciano escuro
-CYAN_GLOW   = "#4dfff3"       # ciano brilhante para glow
-GOLD        = "#ffd54f"       # dourado para alertas/tempo
-GREEN       = "#00e676"       # verde status OK
-RED         = "#ff1744"       # vermelho erro/pausado
-ORANGE      = "#ff9100"       # laranja processando
-WHITE       = "#e0f7fa"       # texto principal
-GRAY        = "#37474f"       # texto secundário
-PANEL_BG    = "#080f14"       # fundo do painel de log
+
+# ── Ativação de High-DPI no Windows (Elimina Pixelado/Desfoque) ─────────────
+def _ativar_dpi_awareness():
+    if sys.platform == "win32":
+        try:
+            # DPI Awareness Per-Monitor V2 (Windows 10 1703+)
+            ctypes.windll.user32.SetProcessDpiAwarenessContext(-4)
+        except Exception:
+            try:
+                # DPI Awareness Per-Monitor (Windows 8.1+)
+                ctypes.windll.shcore.SetProcessDpiAwareness(2)
+            except Exception:
+                try:
+                    # DPI Awareness System (Windows Vista / 7)
+                    ctypes.windll.user32.SetProcessDpiAware()
+                except Exception:
+                    pass
+
+
+# ── Paleta de Cores Sci-Fi Modernizada ──────────────────────────────────────
+BG           = "#040814"       # Deep Obsidian Space Dark
+BG_CARD      = "#081024"       # Dark Glass Card Background
+BG_PANEL     = "#060b18"       # Log & Input Panel Dark
+BORDER_DIM   = "#102040"       # Subtle Frame Border
+BORDER_GLOW  = "#00a2ff"       # Active Neon Glow Border
+
+CYAN         = "#00f0ff"       # Neon Electric Cyan
+CYAN_DIM     = "#005577"       # Muted Blue-Cyan
+CYAN_GLOW    = "#80f8ff"       # Intense Bright Cyan Glow
+BLUE_NEON    = "#0077ff"       # Electric Blue
+GOLD         = "#ffd000"       # Jarvis Golden Accent
+GREEN        = "#00ff9d"       # Status OK / User Text Green
+RED          = "#ff2a5f"       # Error / Paused Red
+ORANGE       = "#ff9d00"       # Processing Amber
+WHITE        = "#f0f6fc"       # Primary Crisp White
+GRAY         = "#6e82a0"       # Secondary Muted Slate
 
 # ── Fontes ───────────────────────────────────────────────────────────────────
-FONT_TITLE   = ("Consolas", 18, "bold")
-FONT_STATUS  = ("Consolas", 11, "bold")
-FONT_LOG     = ("Consolas",  9)
-FONT_INPUT   = ("Consolas", 10)
-FONT_SMALL   = ("Consolas",  8)
-FONT_MIC     = ("Consolas",  9, "bold")
+FONT_TITLE   = ("Segoe UI", 16, "bold")
+FONT_SUBTITLE= ("Consolas", 8)
+FONT_STATUS  = ("Segoe UI", 11, "bold")
+FONT_LOG     = ("Consolas", 10)
+FONT_INPUT   = ("Segoe UI", 10)
+FONT_BTN     = ("Segoe UI", 9, "bold")
+FONT_SMALL   = ("Consolas", 8, "bold")
+FONT_MIC     = ("Segoe UI", 9)
 
 # ── Tamanho inicial da janela ────────────────────────────────────────────────
-WIN_W, WIN_H = 720, 840
+WIN_W, WIN_H = 760, 880
 
 
 class InterfaceJarvis:
     def __init__(self, on_comando_manual, on_fechar, on_detectar_microfones=None, on_salvar_microfone=None):
         self.on_comando_manual       = on_comando_manual
         self.on_fechar               = on_fechar
-        self.on_detectar_microfones  = on_detectar_microfones   # callback → lista[(idx,nome)]
-        self.on_salvar_microfone     = on_salvar_microfone      # callback(int|None)
+        self.on_detectar_microfones  = on_detectar_microfones
+        self.on_salvar_microfone     = on_salvar_microfone
 
         self._fila   = queue.Queue()
         self._angulo = 0.0
         self._status = "INICIALIZANDO"
-        self._pulso  = 0.0          # 0..1, para anel pulsante
+        self._pulso  = 0.0          # 0..1 para anel pulsante
         self._pulso_dir = 1
-        self._grade_offset = 0      # offset da grade holográfica
+        self._grade_offset = 0.0
         self._eh_fullscreen = False
 
         self._microfone_atual = "Detectando..."
         self._mics_disponiveis: list[tuple[int, str]] = []
 
+        # Ativa renderização DPI nítida
+        _ativar_dpi_awareness()
+
         self._construir_janela()
+        self._construir_header()
         self._construir_canvas()
-        self._construir_status_badge()
         self._construir_log()
         self._construir_mic_panel()
         self._construir_entrada()
 
         self._animar()
-        self.root.after(80, self._processar_fila)
+        self.root.after(50, self._processar_fila)
 
-    # ── Construção da janela ─────────────────────────────────────────────────
+    # ── Construção da Janela Principal ───────────────────────────────────────
 
     def _construir_janela(self):
         self.root = tk.Tk()
-        self.root.title("J.A.R.V.I.S — Sistema Online")
+        self.root.title("J.A.R.V.I.S — Sistema Operacional de IA")
         self.root.configure(bg=BG)
         self.root.geometry(f"{WIN_W}x{WIN_H}")
-        self.root.resizable(True, True)
+        self.root.minsize(680, 780)
         self.root.protocol("WM_DELETE_WINDOW", self._ao_fechar)
 
-        # Atalhos para Tela Cheia
+        # Atalhos de Tela Cheia
         self.root.bind("<F11>", self.alternar_tela_cheia)
         self.root.bind("<Escape>", self.desativar_tela_cheia)
 
-    # ── Tela Cheia ───────────────────────────────────────────────────────────
+    # ── Header & Badge de Status ─────────────────────────────────────────────
 
-    def alternar_tela_cheia(self, event=None):
-        self._eh_fullscreen = not getattr(self, "_eh_fullscreen", False)
-        self.root.attributes("-fullscreen", self._eh_fullscreen)
-        if not self._eh_fullscreen:
-            self.root.geometry(f"{WIN_W}x{WIN_H}")
+    def _construir_header(self):
+        self.frame_header = tk.Frame(self.root, bg=BG_CARD, bd=1, relief="flat", highlightbackground=BORDER_DIM, highlightthickness=1)
+        self.frame_header.pack(fill="x", padx=16, pady=(14, 6))
 
-    def desativar_tela_cheia(self, event=None):
-        if getattr(self, "_eh_fullscreen", False):
-            self._eh_fullscreen = False
-            self.root.attributes("-fullscreen", False)
-            self.root.geometry(f"{WIN_W}x{WIN_H}")
+        # Container interno do Header
+        inner = tk.Frame(self.frame_header, bg=BG_CARD)
+        inner.pack(fill="x", padx=12, pady=10)
 
-    # ── Canvas do arc-reactor ────────────────────────────────────────────────
-
-    def _construir_canvas(self):
-        self.canvas = tk.Canvas(
-            self.root, width=WIN_W, height=420,
-            bg=BG, highlightthickness=0,
-        )
-        self.canvas.pack(side="top", fill="both", expand=True)
-
-    # ── Badge de status ──────────────────────────────────────────────────────
-
-    def _construir_status_badge(self):
-        self.frame_status = tk.Frame(self.root, bg=BG)
-        self.frame_status.pack(fill="x", padx=20, pady=(0, 4))
-
+        # Dot indicador pulsante
         self.label_status_dot = tk.Label(
-            self.frame_status, text="●", font=("Consolas", 14),
-            fg=GREEN, bg=BG,
+            inner, text="●", font=("Segoe UI", 16),
+            fg=GREEN, bg=BG_CARD,
         )
-        self.label_status_dot.pack(side="left", padx=(0, 6))
+        self.label_status_dot.pack(side="left", padx=(4, 8))
 
+        # Texto do Status
         self.label_status = tk.Label(
-            self.frame_status, text="INICIALIZANDO...",
-            font=FONT_STATUS, fg=CYAN, bg=BG,
+            inner, text="INICIALIZANDO...",
+            font=FONT_STATUS, fg=CYAN, bg=BG_CARD,
         )
         self.label_status.pack(side="left")
 
-        # Separador horizontal
-        sep = tk.Frame(self.root, height=1, bg=CYAN_DIM)
-        sep.pack(fill="x", padx=12, pady=(4, 6))
+        # Versão do Sistema à direita
+        lbl_sys = tk.Label(
+            inner, text="SYSTEM ONLINE v4.2  ◈  CORE ACTIVE",
+            font=FONT_SUBTITLE, fg=GRAY, bg=BG_CARD,
+        )
+        lbl_sys.pack(side="right", padx=6)
 
-    # ── Log de conversa ──────────────────────────────────────────────────────
+    # ── Canvas do Arc-Reactor ────────────────────────────────────────────────
+
+    def _construir_canvas(self):
+        frame_canvas = tk.Frame(self.root, bg=BG)
+        frame_canvas.pack(fill="both", expand=True, padx=16, pady=4)
+
+        self.canvas = tk.Canvas(
+            frame_canvas, width=WIN_W, height=380,
+            bg=BG, highlightthickness=0, bd=0,
+        )
+        self.canvas.pack(fill="both", expand=True)
+
+    # ── Log de Conversa Estilizado ───────────────────────────────────────────
 
     def _construir_log(self):
-        frame_log = tk.Frame(self.root, bg=BG2, bd=0)
-        frame_log.pack(fill="both", expand=True, padx=12, pady=(0, 6))
+        frame_log_outer = tk.Frame(
+            self.root, bg=BG_CARD, bd=1,
+            highlightbackground=BORDER_DIM, highlightthickness=1,
+        )
+        frame_log_outer.pack(fill="both", expand=True, padx=16, pady=6)
 
-        # Cabeçalho do painel
+        # Cabeçalho do Log
+        frame_head = tk.Frame(frame_log_outer, bg=BG_CARD)
+        frame_head.pack(fill="x", padx=12, pady=(8, 4))
+
         tk.Label(
-            frame_log, text="◈  REGISTRO DE COMUNICAÇÃO",
-            font=FONT_SMALL, fg=CYAN_DIM, bg=BG2, anchor="w",
-        ).pack(fill="x", padx=8, pady=(4, 2))
+            frame_head, text="◈  REGISTRO DE COMUNICAÇÃO EM TEMPO REAL",
+            font=FONT_SMALL, fg=CYAN_DIM, bg=BG_CARD, anchor="w",
+        ).pack(side="left")
+
+        # Área de Texto
+        frame_text = tk.Frame(frame_log_outer, bg=BG_PANEL)
+        frame_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         self.log = tk.Text(
-            frame_log, bg=PANEL_BG, fg=WHITE,
+            frame_text, bg=BG_PANEL, fg=WHITE,
             insertbackground=CYAN, font=FONT_LOG,
             bd=0, wrap="word", state="disabled",
-            selectbackground=CYAN_DIM,
-            height=10,
+            selectbackground=BLUE_NEON, selectforeground=WHITE,
+            height=8, padx=8, pady=8,
         )
-        scroll = tk.Scrollbar(frame_log, command=self.log.yview, bg=BG2,
-                               troughcolor=BG2, bd=0)
+        scroll = tk.Scrollbar(
+            frame_text, command=self.log.yview, bg=BG_CARD,
+            troughcolor=BG_PANEL, bd=0, relief="flat", width=10,
+        )
         self.log.configure(yscrollcommand=scroll.set)
-        scroll.pack(side="right", fill="y", pady=4, padx=(0, 4))
-        self.log.pack(fill="both", expand=True, padx=(8, 0), pady=(0, 6))
 
-        # Tags de cor por tipo de mensagem
-        self.log.tag_configure("voz",    foreground=CYAN_GLOW)
-        self.log.tag_configure("jarvis", foreground=GOLD)
-        self.log.tag_configure("sistema",foreground=GRAY)
-        self.log.tag_configure("erro",   foreground=RED)
-        self.log.tag_configure("texto",  foreground=GREEN)
-        self.log.tag_configure("ts",     foreground=CYAN_DIM)
+        scroll.pack(side="right", fill="y")
+        self.log.pack(fill="both", expand=True)
 
-    # ── Painel de microfone e controle de tela ───────────────────────────────
+        # Tags de Cores para mensagens
+        self.log.tag_configure("voz",     foreground=CYAN_GLOW, font=("Consolas", 10, "bold"))
+        self.log.tag_configure("jarvis",  foreground=GOLD,      font=("Consolas", 10, "bold"))
+        self.log.tag_configure("sistema", foreground=GRAY)
+        self.log.tag_configure("erro",    foreground=RED,       font=("Consolas", 10, "bold"))
+        self.log.tag_configure("texto",   foreground=GREEN,     font=("Consolas", 10, "bold"))
+        self.log.tag_configure("ts",      foreground=CYAN_DIM)
+
+    # ── Painel do Microfone & Controles ──────────────────────────────────────
 
     def _construir_mic_panel(self):
-        self.frame_mic = tk.Frame(self.root, bg=BG2, bd=0)
-        self.frame_mic.pack(fill="x", padx=12, pady=(0, 6))
+        self.frame_mic = tk.Frame(
+            self.root, bg=BG_CARD, bd=1,
+            highlightbackground=BORDER_DIM, highlightthickness=1,
+        )
+        self.frame_mic.pack(fill="x", padx=16, pady=4)
+
+        inner = tk.Frame(self.frame_mic, bg=BG_CARD)
+        inner.pack(fill="x", padx=10, pady=6)
 
         tk.Label(
-            self.frame_mic, text="◈  MICROFONE",
-            font=FONT_SMALL, fg=CYAN_DIM, bg=BG2, anchor="w",
-        ).pack(side="left", padx=8, pady=6)
+            inner, text="🎙 DISPOSITIVO:",
+            font=FONT_SMALL, fg=CYAN_DIM, bg=BG_CARD,
+        ).pack(side="left", padx=(4, 6))
 
         self.label_mic_nome = tk.Label(
-            self.frame_mic, text="—",
-            font=FONT_MIC, fg=WHITE, bg=BG2, anchor="w",
+            inner, text="Detectando...",
+            font=FONT_MIC, fg=WHITE, bg=BG_CARD, anchor="w",
         )
-        self.label_mic_nome.pack(side="left", padx=6, pady=6, fill="x", expand=True)
+        self.label_mic_nome.pack(side="left", fill="x", expand=True, padx=4)
 
+        # Botão de Tela Cheia
         btn_fullscreen = tk.Button(
-            self.frame_mic, text="⛶ TELA CHEIA (F11)",
+            inner, text="⛶ TELA CHEIA (F11)",
             command=self.alternar_tela_cheia,
-            bg=CYAN_DIM, fg=CYAN, font=FONT_SMALL,
-            relief="flat", padx=8, pady=3, cursor="hand2",
-            activebackground=CYAN, activeforeground=BG,
+            bg=BORDER_DIM, fg=CYAN, font=FONT_BTN,
+            relief="flat", bd=0, padx=10, pady=4, cursor="hand2",
+            activebackground=BLUE_NEON, activeforeground=WHITE,
         )
-        btn_fullscreen.pack(side="right", padx=(0, 8), pady=4)
+        btn_fullscreen.pack(side="right", padx=(4, 0))
 
+        # Botão de Trocar Microfone
         btn_detectar = tk.Button(
-            self.frame_mic, text="⟳ DETECTAR",
+            inner, text="⟳ DETECTAR MIC",
             command=self._abrir_dialogo_microfone,
-            bg=CYAN_DIM, fg=CYAN, font=FONT_SMALL,
-            relief="flat", padx=8, pady=3, cursor="hand2",
-            activebackground=CYAN, activeforeground=BG,
+            bg=BORDER_DIM, fg=CYAN, font=FONT_BTN,
+            relief="flat", bd=0, padx=10, pady=4, cursor="hand2",
+            activebackground=BLUE_NEON, activeforeground=WHITE,
         )
-        btn_detectar.pack(side="right", padx=6, pady=4)
+        btn_detectar.pack(side="right", padx=4)
 
-    # ── Campo de entrada de texto ────────────────────────────────────────────
+        # Efeitos de Hover nos botões
+        for b in (btn_fullscreen, btn_detectar):
+            b.bind("<Enter>", lambda e, btn=b: btn.configure(bg="#18325a"))
+            b.bind("<Leave>", lambda e, btn=b: btn.configure(bg=BORDER_DIM))
+
+    # ── Campo de Entrada de Texto ────────────────────────────────────────────
 
     def _construir_entrada(self):
-        frame_entrada = tk.Frame(self.root, bg=BG2, bd=0)
-        frame_entrada.pack(fill="x", padx=12, pady=(0, 10))
+        self.frame_entrada_outer = tk.Frame(
+            self.root, bg=BG_CARD, bd=1,
+            highlightbackground=BORDER_DIM, highlightthickness=1,
+        )
+        self.frame_entrada_outer.pack(fill="x", padx=16, pady=(4, 16))
+
+        inner = tk.Frame(self.frame_entrada_outer, bg=BG_CARD)
+        inner.pack(fill="x", padx=8, pady=6)
 
         tk.Label(
-            frame_entrada, text="▶",
-            font=("Consolas", 12), fg=CYAN, bg=BG2,
-        ).pack(side="left", padx=(10, 4), pady=8)
+            inner, text="▶",
+            font=("Segoe UI", 11, "bold"), fg=CYAN, bg=BG_CARD,
+        ).pack(side="left", padx=(8, 4))
+
+        # Frame interno para simular borda de foco na entrada
+        self.frame_input_border = tk.Frame(inner, bg=BORDER_DIM, bd=1)
+        self.frame_input_border.pack(side="left", fill="x", expand=True, padx=4)
 
         self.entrada = tk.Entry(
-            frame_entrada, bg=PANEL_BG, fg=WHITE,
+            self.frame_input_border, bg=BG_PANEL, fg=WHITE,
             insertbackground=CYAN, font=FONT_INPUT,
             relief="flat", bd=0,
         )
-        self.entrada.pack(side="left", fill="x", expand=True, ipady=7, padx=(0, 6))
+        self.entrada.pack(fill="x", expand=True, ipady=6, padx=8)
         self.entrada.bind("<Return>", self._enviar_manual)
-        self.entrada.insert(0, "Digite um comando ou fale...")
+        self.entrada.insert(0, "Digite um comando ou fale com o JARVIS...")
         self.entrada.configure(fg=GRAY)
-        self.entrada.bind("<FocusIn>",  self._limpar_placeholder)
-        self.entrada.bind("<FocusOut>", self._restaurar_placeholder)
+        self.entrada.bind("<FocusIn>",  self._ao_focar_entrada)
+        self.entrada.bind("<FocusOut>", self._ao_desfocar_entrada)
 
-        btn = tk.Button(
-            frame_entrada, text="ENVIAR",
+        self.btn_enviar = tk.Button(
+            inner, text="ENVIAR",
             command=self._enviar_manual,
-            bg=CYAN, fg=BG, font=("Consolas", 10, "bold"),
-            relief="flat", padx=14, pady=6, cursor="hand2",
-            activebackground=CYAN_GLOW, activeforeground=BG,
+            bg=BLUE_NEON, fg=WHITE, font=FONT_BTN,
+            relief="flat", bd=0, padx=16, pady=6, cursor="hand2",
+            activebackground=CYAN, activeforeground=BG,
         )
-        btn.pack(side="right", padx=(0, 8), pady=4)
+        self.btn_enviar.pack(side="right", padx=(6, 4))
+        self.btn_enviar.bind("<Enter>", lambda e: self.btn_enviar.configure(bg=CYAN, fg=BG))
+        self.btn_enviar.bind("<Leave>", lambda e: self.btn_enviar.configure(bg=BLUE_NEON, fg=WHITE))
 
-    # ── Animação principal ───────────────────────────────────────────────────
+    def _ao_focar_entrada(self, event=None):
+        self.frame_input_border.configure(bg=CYAN)
+        if self.entrada.get() == "Digite um comando ou fale com o JARVIS...":
+            self.entrada.delete(0, "end")
+            self.entrada.configure(fg=WHITE)
+
+    def _ao_desfocar_entrada(self, event=None):
+        self.frame_input_border.configure(bg=BORDER_DIM)
+        if not self.entrada.get().strip():
+            self.entrada.insert(0, "Digite um comando ou fale com o JARVIS...")
+            self.entrada.configure(fg=GRAY)
+
+    # ── Animação do HUD ──────────────────────────────────────────────────────
 
     def _animar(self):
-        self._angulo = (self._angulo + 1.2) % 360
-        self._pulso  += 0.04 * self._pulso_dir
+        self._angulo = (self._angulo + 1.5) % 360
+        self._pulso  += 0.03 * self._pulso_dir
         if self._pulso >= 1.0:
+            self._pulso = 1.0
             self._pulso_dir = -1
         elif self._pulso <= 0.0:
+            self._pulso = 0.0
             self._pulso_dir = 1
-        self._grade_offset = (self._grade_offset + 0.4) % 40
+        self._grade_offset = (self._grade_offset + 0.5) % 40
 
         self._desenhar_cena()
         self.root.after(30, self._animar)
@@ -266,44 +345,73 @@ class InterfaceJarvis:
         cy = h // 2
 
         self._desenhar_grade(w, h)
+        self._desenhar_aura_glow(cx, cy)
         self._desenhar_arc_reactor(cx, cy)
         self._desenhar_titulo(cx, cy)
-        self._desenhar_varredura_lateral(cx, cy, w, h)
+        self._desenhar_telemetria_hud(cx, cy, w, h)
 
-    # Grade holográfica de fundo
+    # Grade Holográfica com linhas finas e pontos de interseção
     def _desenhar_grade(self, w, h):
         off = self._grade_offset
-        cor = "#0a1a22"
-        for x in range(-40, w + 40, 40):
-            self.canvas.create_line(x + off, 0, x + off, h, fill=cor, width=1)
-        for y in range(0, h + 40, 40):
-            self.canvas.create_line(0, y + off, w, y + off, fill=cor, width=1)
+        cor_linha = "#081326"
+        step = 40
+        for x in range(-step, w + step, step):
+            px = x + off
+            self.canvas.create_line(px, 0, px, h, fill=cor_linha, width=1)
+        for y in range(-step, h + step, step):
+            py = y + off
+            self.canvas.create_line(0, py, w, py, fill=cor_linha, width=1)
 
-    # Arc-reactor central
+    # Simulador de Brilho Suave (Aura Radial)
+    def _desenhar_aura_glow(self, cx, cy):
+        status_cor = self._cor_status()
+        is_active = "OUVINDO" in self._status or "PROCESSANDO" in self._status
+        
+        # Camadas concêntricas para simular gradiente de luz suave
+        glow_colors = [
+            ("#040f24", 210),
+            ("#071a38", 180),
+            ("#0a254c", 150),
+            ("#0c3266", 120),
+        ] if not is_active else [
+            ("#051c2e", 230 + int(20 * self._pulso)),
+            ("#0a334f", 190 + int(15 * self._pulso)),
+            ("#0e4b73", 150 + int(10 * self._pulso)),
+            ("#12669c", 110 + int(5 * self._pulso)),
+        ]
+
+        for color, radius in glow_colors:
+            self.canvas.create_oval(
+                cx - radius, cy - radius,
+                cx + radius, cy + radius,
+                fill=color, outline="", width=0,
+            )
+
+    # Arc-Reactor HD com Geometria Suave
     def _desenhar_arc_reactor(self, cx, cy):
         status_cor = self._cor_status()
 
-        # Anel de pulso externo (quando ouvindo)
+        # Pulso Externo quando ouvindo/processando
         if "OUVINDO" in self._status:
-            raio_pulso = 185 + 12 * self._pulso
+            r_pulso = 175 + int(18 * math.sin(self._pulso * math.pi))
             self.canvas.create_oval(
-                cx - raio_pulso, cy - raio_pulso,
-                cx + raio_pulso, cy + raio_pulso,
-                outline=CYAN_DIM, width=2 + int(2 * self._pulso),
+                cx - r_pulso, cy - r_pulso,
+                cx + r_pulso, cy + r_pulso,
+                outline=BLUE_NEON, width=2,
             )
             self.canvas.create_oval(
-                cx - raio_pulso + 10, cy - raio_pulso + 10,
-                cx + raio_pulso - 10, cy + raio_pulso - 10,
-                outline=CYAN, width=1,
+                cx - r_pulso + 8, cy - r_pulso + 8,
+                cx + r_pulso - 8, cy + r_pulso - 8,
+                outline=CYAN_GLOW, width=1,
             )
 
-        # Anéis interiores
+        # Anéis Giratórios Interiores
         aneis = [
-            (170, 2, CYAN_DIM,  0.30, 280),
-            (148, 3, status_cor, -0.60, 300),
-            (122, 2, CYAN_DIM,  0.90, 260),
-            (100, 3, status_cor, -1.20, 310),
-            (78,  2, CYAN_DIM,  1.50, 270),
+            (160, 2, CYAN_DIM,    0.40, 290),
+            (140, 3, status_cor, -0.70, 310),
+            (118, 2, BLUE_NEON,   1.10, 270),
+            (96,  3, status_cor, -1.40, 320),
+            (76,  2, CYAN_GLOW,   1.80, 280),
         ]
         for raio, larg, cor, vel, extent in aneis:
             inicio = (self._angulo * vel) % 360
@@ -313,92 +421,96 @@ class InterfaceJarvis:
                 style="arc", outline=cor, width=larg,
             )
 
-        # Núcleo hexagonal (simulado com círculos concêntricos)
-        for r, cor in [(54, "#0d2a35"), (44, "#0f3040"), (34, "#124050"), (22, CYAN_DIM)]:
+        # Núcleo Hexagonal Suave (calculado trigonometricamente)
+        hex_points = []
+        r_hex = 52
+        ang_off = math.radians(self._angulo * 0.3)
+        for i in range(6):
+            a = ang_off + i * (math.pi / 3)
+            hx = cx + r_hex * math.cos(a)
+            hy = cy + r_hex * math.sin(a)
+            hex_points.extend([hx, hy])
+
+        self.canvas.create_polygon(
+            hex_points, fill="#071b28", outline=status_cor, width=2,
+        )
+
+        # Círculo Núcleo Interior
+        for r, cor in [(36, "#0a293c"), (26, "#0d3c59"), (16, CYAN_GLOW)]:
             self.canvas.create_oval(
                 cx - r, cy - r, cx + r, cy + r,
                 fill=cor, outline="", width=0,
             )
 
-        # Brilho central
+        # Brilho Central do Core
+        r_core = 10 + int(3 * math.sin(self._pulso * math.pi))
         self.canvas.create_oval(
-            cx - 14, cy - 14, cx + 14, cy + 14,
-            fill=CYAN if "OUVINDO" in self._status else CYAN_DIM,
-            outline=CYAN_GLOW, width=2,
+            cx - r_core, cy - r_core, cx + r_core, cy + r_core,
+            fill=WHITE, outline=CYAN_GLOW, width=2,
         )
 
-        # Linhas de varredura do núcleo
-        for i in range(6):
-            ang = math.radians(self._angulo * 0.5 + i * 60)
-            x2  = cx + 50 * math.cos(ang)
-            y2  = cy + 50 * math.sin(ang)
-            self.canvas.create_line(cx, cy, x2, y2, fill=CYAN_DIM, width=1)
+        # Partículas Orbitais Suaves
+        for i in range(4):
+            a_orb = math.radians(self._angulo * 0.8 + i * 90)
+            r_orb = 128
+            ox = cx + r_orb * math.cos(a_orb)
+            oy = cy + r_orb * math.sin(a_orb)
+            self.canvas.create_oval(ox-4, oy-4, ox+4, oy+4, fill=CYAN_GLOW, outline=BLUE_NEON)
 
-    # Título com sublinhado decorativo
+    # Título do HUD com tipografia nítida
     def _desenhar_titulo(self, cx, cy):
         self.canvas.create_text(
-            cx, cy + 2, text="J.A.R.V.I.S",
-            fill=CYAN_GLOW, font=("Consolas", 19, "bold"),
+            cx, cy - 2, text="J.A.R.V.I.S",
+            fill=WHITE, font=("Segoe UI", 20, "bold"),
         )
-        self.canvas.create_line(cx - 55, cy + 14, cx + 55, cy + 14,
-                                 fill=CYAN_DIM, width=1)
-
+        self.canvas.create_line(
+            cx - 60, cy + 16, cx + 60, cy + 16,
+            fill=CYAN, width=2,
+        )
         self.canvas.create_text(
-            cx, cy + 24, text="SISTEMA DE ASSISTÊNCIA PESSOAL v4",
-            fill=CYAN_DIM, font=("Consolas", 7),
+            cx, cy + 28, text="INTELLIGENT SYSTEM ARCHITECTURE",
+            fill=CYAN_DIM, font=("Consolas", 8, "bold"),
         )
 
-    # Barras de varredura laterais (estilo HUD)
-    def _desenhar_varredura_lateral(self, cx, cy, w, h):
-        status_cor = self._cor_status()
-
-        # Cantos decorativos do canvas
-        for (x1, y1, x2, y2) in [
-            (10, 10, 40, 10), (10, 10, 10, 40),
-            (w-40, 10, w-10, 10), (w-10, 10, w-10, 40),
-            (10, h-10, 40, h-10), (10, h-40, 10, h-10),
-            (w-40, h-10, w-10, h-10), (w-10, h-40, w-10, h-10),
-        ]:
+    # Molduras e Telemetria Sci-Fi
+    def _desenhar_telemetria_hud(self, cx, cy, w, h):
+        # Cantos Decorativos HD
+        pad = 12
+        length = 24
+        cantos = [
+            (pad, pad, pad + length, pad), (pad, pad, pad, pad + length),
+            (w - pad - length, pad, w - pad, pad), (w - pad, pad, w - pad, pad + length),
+            (pad, h - pad, pad + length, h - pad), (pad, h - pad - length, pad, h - pad),
+            (w - pad - length, h - pad, w - pad, h - pad), (w - pad, h - pad - length, w - pad, h - pad),
+        ]
+        for x1, y1, x2, y2 in cantos:
             self.canvas.create_line(x1, y1, x2, y2, fill=CYAN_DIM, width=2)
 
-        # Esquerda - esferas orbitais
-        for i, (r, c) in enumerate([
-            (1.0, CYAN_DIM), (0.85, CYAN_DIM), (0.7, CYAN_DIM),
-        ]):
-            ang = math.radians(self._angulo * r * -0.4 + i * 30)
-            raio = 200 + i * 15
-            x = cx + raio * math.cos(ang)
-            y = cy + raio * math.sin(ang)
-            self.canvas.create_oval(x-3, y-3, x+3, y+3, fill=c, outline="")
-
-        # Labels de telemetria
-        y_base = max(h - 55, 180)
-        dados = [
-            (f"ENERGIA  : {85 + int(15 * self._pulso):3d}%", 80),
-            (f"LATÊNCIA : {12 + int(8 * self._pulso):3d}ms", 80),
-            (f"CANAL    : pt-BR", 80),
+        # Painéis de Telemetria Inferiores
+        y_base = max(h - 50, 160)
+        t_left = [
+            f"PWR CORE : {92 + int(8 * math.sin(self._pulso * math.pi)):3d}%",
+            f"LATENCY  : {10 + int(5 * math.sin(self._pulso * math.pi)):3d} ms",
+            f"VOICE IN : ACTIVE",
         ]
-        for texto, x in dados:
+        for idx, texto in enumerate(t_left):
             self.canvas.create_text(
-                x, y_base, text=texto, fill=CYAN_DIM,
-                font=("Consolas", 7), anchor="w",
+                24, y_base + idx * 14, text=texto,
+                fill=CYAN_DIM, font=("Consolas", 8), anchor="w",
             )
-            y_base += 14
 
-        y_base = max(h - 55, 180)
-        dados2 = [
-            (f"MOTOR    : Google STT", w - 80),
-            (f"MODO     : CONTÍNUO",   w - 80),
-            (f"STATUS   : {self._status[:10]}", w - 80),
+        t_right = [
+            f"STT ENG  : Google Speech",
+            f"AUDIO CH : STEREO 48K",
+            f"STATE    : {self._status[:12]}",
         ]
-        for texto, x in dados2:
+        for idx, texto in enumerate(t_right):
             self.canvas.create_text(
-                x, y_base, text=texto, fill=CYAN_DIM,
-                font=("Consolas", 7), anchor="e",
+                w - 24, y_base + idx * 14, text=texto,
+                fill=CYAN_DIM, font=("Consolas", 8), anchor="e",
             )
-            y_base += 14
 
-    # ── Processar fila de eventos (thread-safe) ──────────────────────────────
+    # ── Processamento de Fila Thread-Safe ────────────────────────────────────
 
     def _processar_fila(self):
         try:
@@ -414,11 +526,11 @@ class InterfaceJarvis:
                     self._microfone_atual = valor
         except queue.Empty:
             pass
-        self.root.after(80, self._processar_fila)
+        self.root.after(50, self._processar_fila)
 
     def _aplicar_status(self, texto: str):
         self._status = texto.upper()
-        self.label_status.configure(text=texto.upper())
+        self.label_status.configure(text=self._status)
 
         cores_dot = {
             "OUVINDO":      GREEN,
@@ -443,7 +555,7 @@ class InterfaceJarvis:
         self.log.see("end")
         self.log.configure(state="disabled")
 
-    # ── API pública (thread-safe) ────────────────────────────────────────────
+    # ── API Pública (Thread-Safe) ────────────────────────────────────────────
 
     def atualizar_status(self, texto: str):
         self._fila.put(("status", texto))
@@ -454,27 +566,31 @@ class InterfaceJarvis:
     def atualizar_microfone(self, nome: str):
         self._fila.put(("mic_nome", nome))
 
-    # ── Entrada manual ───────────────────────────────────────────────────────
+    # ── Controle de Tela Cheia ───────────────────────────────────────────────
 
-    def _limpar_placeholder(self, event=None):
-        if self.entrada.get() == "Digite um comando ou fale...":
-            self.entrada.delete(0, "end")
-            self.entrada.configure(fg=WHITE)
+    def alternar_tela_cheia(self, event=None):
+        self._eh_fullscreen = not getattr(self, "_eh_fullscreen", False)
+        self.root.attributes("-fullscreen", self._eh_fullscreen)
+        if not self._eh_fullscreen:
+            self.root.geometry(f"{WIN_W}x{WIN_H}")
 
-    def _restaurar_placeholder(self, event=None):
-        if not self.entrada.get():
-            self.entrada.insert(0, "Digite um comando ou fale...")
-            self.entrada.configure(fg=GRAY)
+    def desativar_tela_cheia(self, event=None):
+        if getattr(self, "_eh_fullscreen", False):
+            self._eh_fullscreen = False
+            self.root.attributes("-fullscreen", False)
+            self.root.geometry(f"{WIN_W}x{WIN_H}")
+
+    # ── Envio de Comando Manual ──────────────────────────────────────────────
 
     def _enviar_manual(self, event=None):
         texto = self.entrada.get().strip()
-        if not texto or texto == "Digite um comando ou fale...":
+        if not texto or texto == "Digite um comando ou fale com o JARVIS...":
             return
         self.entrada.delete(0, "end")
         self.registrar_log(f"Você (texto): {texto}", "texto")
         self.on_comando_manual(texto)
 
-    # ── Diálogo de seleção de microfone ─────────────────────────────────────
+    # ── Diálogo Modal de Seleção de Microfone ────────────────────────────────
 
     def _abrir_dialogo_microfone(self):
         mics = []
@@ -482,36 +598,45 @@ class InterfaceJarvis:
             mics = self.on_detectar_microfones()
 
         dialog = tk.Toplevel(self.root)
-        dialog.title("Selecionar Microfone")
+        dialog.title("Selecionar Dispositivo de Entrada")
         dialog.configure(bg=BG)
-        dialog.geometry("500x400")
+        dialog.geometry("520x420")
         dialog.transient(self.root)
         dialog.grab_set()
 
-        tk.Label(
-            dialog, text="SELECIONAR DISPOSITIVO DE ENTRADA",
-            font=FONT_STATUS, fg=CYAN, bg=BG,
-        ).pack(pady=(16, 6))
+        frame_modal = tk.Frame(
+            dialog, bg=BG_CARD, bd=1,
+            highlightbackground=BORDER_DIM, highlightthickness=1,
+        )
+        frame_modal.pack(fill="both", expand=True, padx=16, pady=16)
 
         tk.Label(
-            dialog,
-            text="Escolha o microfone correto e clique em Usar Este:",
-            font=FONT_SMALL, fg=GRAY, bg=BG,
+            frame_modal, text="SELECIONAR MICROFONE",
+            font=FONT_STATUS, fg=CYAN, bg=BG_CARD,
+        ).pack(pady=(16, 4))
+
+        tk.Label(
+            frame_modal,
+            text="Escolha o dispositivo de entrada ativo e clique em Confirmar:",
+            font=FONT_SMALL, fg=GRAY, bg=BG_CARD,
         ).pack(pady=(0, 10))
 
-        frame_lista = tk.Frame(dialog, bg=BG2)
-        frame_lista.pack(fill="both", expand=True, padx=16, pady=(0, 10))
+        frame_lista = tk.Frame(frame_modal, bg=BG_PANEL)
+        frame_lista.pack(fill="both", expand=True, padx=16, pady=(0, 12))
 
         lista = tk.Listbox(
-            frame_lista, bg=PANEL_BG, fg=WHITE, font=FONT_LOG,
-            selectbackground=CYAN_DIM, selectforeground=WHITE,
+            frame_lista, bg=BG_PANEL, fg=WHITE, font=FONT_LOG,
+            selectbackground=BLUE_NEON, selectforeground=WHITE,
             bd=0, highlightthickness=0, activestyle="none",
         )
-        scroll_l = tk.Scrollbar(frame_lista, command=lista.yview, bg=BG2,
-                                 troughcolor=BG2, bd=0)
+        scroll_l = tk.Scrollbar(
+            frame_lista, command=lista.yview, bg=BG_CARD,
+            troughcolor=BG_PANEL, bd=0, relief="flat", width=10,
+        )
         lista.configure(yscrollcommand=scroll_l.set)
+
         scroll_l.pack(side="right", fill="y")
-        lista.pack(fill="both", expand=True)
+        lista.pack(fill="both", expand=True, padx=6, pady=6)
 
         lista.insert("end", "[Padrão do sistema]")
         for idx, nome in mics:
@@ -535,14 +660,18 @@ class InterfaceJarvis:
             self.registrar_log(f"[sistema] Microfone alterado para: {nome_display}", "sistema")
             dialog.destroy()
 
-        tk.Button(
-            dialog, text="✔  USAR ESTE",
+        btn_confirmar = tk.Button(
+            frame_modal, text="✔  USAR ESTE DISPOSITIVO",
             command=usar_selecionado,
-            bg=CYAN, fg=BG, font=("Consolas", 10, "bold"),
-            relief="flat", padx=16, pady=6, cursor="hand2",
-        ).pack(pady=(0, 16))
+            bg=BLUE_NEON, fg=WHITE, font=FONT_BTN,
+            relief="flat", bd=0, padx=18, pady=8, cursor="hand2",
+            activebackground=CYAN, activeforeground=BG,
+        )
+        btn_confirmar.pack(pady=(0, 16))
+        btn_confirmar.bind("<Enter>", lambda e: btn_confirmar.configure(bg=CYAN, fg=BG))
+        btn_confirmar.bind("<Leave>", lambda e: btn_confirmar.configure(bg=BLUE_NEON, fg=WHITE))
 
-    # ── Fechar ───────────────────────────────────────────────────────────────
+    # ── Finalização & Eventos ────────────────────────────────────────────────
 
     def _ao_fechar(self):
         self.on_fechar()
