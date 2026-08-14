@@ -98,8 +98,8 @@ class InterfaceJarvis:
         self._construir_janela()
         self._construir_header()
         self._construir_canvas()
+        self._construir_mic_panel()   # Posicionado estrategicamente logo abaixo do Canvas
         self._construir_log()
-        self._construir_mic_panel()
         self._construir_entrada()
 
         self._animar()
@@ -123,11 +123,11 @@ class InterfaceJarvis:
 
     def _construir_header(self):
         self.frame_header = tk.Frame(self.root, bg=BG_CARD, bd=1, relief="flat", highlightbackground=BORDER_DIM, highlightthickness=1)
-        self.frame_header.pack(fill="x", padx=16, pady=(14, 6))
+        self.frame_header.pack(fill="x", padx=16, pady=(10, 4))
 
         # Container interno do Header
         inner = tk.Frame(self.frame_header, bg=BG_CARD)
-        inner.pack(fill="x", padx=12, pady=10)
+        inner.pack(fill="x", padx=12, pady=8)
 
         # Dot indicador pulsante
         self.label_status_dot = tk.Label(
@@ -154,59 +154,13 @@ class InterfaceJarvis:
 
     def _construir_canvas(self):
         frame_canvas = tk.Frame(self.root, bg=BG)
-        frame_canvas.pack(fill="both", expand=True, padx=16, pady=4)
+        frame_canvas.pack(fill="x", padx=16, pady=2)
 
         self.canvas = tk.Canvas(
-            frame_canvas, width=WIN_W, height=380,
+            frame_canvas, width=WIN_W, height=300,
             bg=BG, highlightthickness=0, bd=0,
         )
-        self.canvas.pack(fill="both", expand=True)
-
-    # ── Log de Conversa Estilizado ───────────────────────────────────────────
-
-    def _construir_log(self):
-        frame_log_outer = tk.Frame(
-            self.root, bg=BG_CARD, bd=1,
-            highlightbackground=BORDER_DIM, highlightthickness=1,
-        )
-        frame_log_outer.pack(fill="both", expand=True, padx=16, pady=6)
-
-        # Cabeçalho do Log
-        frame_head = tk.Frame(frame_log_outer, bg=BG_CARD)
-        frame_head.pack(fill="x", padx=12, pady=(8, 4))
-
-        tk.Label(
-            frame_head, text="◈  REGISTRO DE COMUNICAÇÃO EM TEMPO REAL",
-            font=FONT_SMALL, fg=CYAN_DIM, bg=BG_CARD, anchor="w",
-        ).pack(side="left")
-
-        # Área de Texto
-        frame_text = tk.Frame(frame_log_outer, bg=BG_PANEL)
-        frame_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-
-        self.log = tk.Text(
-            frame_text, bg=BG_PANEL, fg=WHITE,
-            insertbackground=CYAN, font=FONT_LOG,
-            bd=0, wrap="word", state="disabled",
-            selectbackground=BLUE_NEON, selectforeground=WHITE,
-            height=8, padx=8, pady=8,
-        )
-        scroll = tk.Scrollbar(
-            frame_text, command=self.log.yview, bg=BG_CARD,
-            troughcolor=BG_PANEL, bd=0, relief="flat", width=10,
-        )
-        self.log.configure(yscrollcommand=scroll.set)
-
-        scroll.pack(side="right", fill="y")
-        self.log.pack(fill="both", expand=True)
-
-        # Tags de Cores para mensagens
-        self.log.tag_configure("voz",     foreground=CYAN_GLOW, font=("Consolas", 10, "bold"))
-        self.log.tag_configure("jarvis",  foreground=GOLD,      font=("Consolas", 10, "bold"))
-        self.log.tag_configure("sistema", foreground=GRAY)
-        self.log.tag_configure("erro",    foreground=RED,       font=("Consolas", 10, "bold"))
-        self.log.tag_configure("texto",   foreground=GREEN,     font=("Consolas", 10, "bold"))
-        self.log.tag_configure("ts",      foreground=CYAN_DIM)
+        self.canvas.pack(fill="x")
 
     # ── Painel do Microfone & Controles de Mudo ──────────────────────────────────
 
@@ -254,7 +208,7 @@ class InterfaceJarvis:
 
         # ── Linha 2: Barra Destaque de MUTE / UNMUTE ──
         row2 = tk.Frame(self.frame_mic, bg=BG_PANEL, bd=1, highlightbackground=BORDER_DIM, highlightthickness=1)
-        row2.pack(fill="x", padx=10, pady=(4, 8))
+        row2.pack(fill="x", padx=10, pady=(4, 6))
 
         inner_row2 = tk.Frame(row2, bg=BG_PANEL)
         inner_row2.pack(fill="x", padx=8, pady=4)
@@ -289,6 +243,51 @@ class InterfaceJarvis:
             b.bind("<Enter>", lambda e, btn=b: btn.configure(bg="#18325a"))
             b.bind("<Leave>", lambda e, btn=b: btn.configure(bg=BORDER_DIM))
 
+    # ── Log de Conversa Estilizado ───────────────────────────────────────────
+
+    def _construir_log(self):
+        frame_log_outer = tk.Frame(
+            self.root, bg=BG_CARD, bd=1,
+            highlightbackground=BORDER_DIM, highlightthickness=1,
+        )
+        frame_log_outer.pack(fill="both", expand=True, padx=16, pady=4)
+
+        # Cabeçalho do Log
+        frame_head = tk.Frame(frame_log_outer, bg=BG_CARD)
+        frame_head.pack(fill="x", padx=12, pady=(6, 2))
+
+        tk.Label(
+            frame_head, text="◈  REGISTRO DE COMUNICAÇÃO EM TEMPO REAL",
+            font=FONT_SMALL, fg=CYAN_DIM, bg=BG_CARD, anchor="w",
+        ).pack(side="left")
+
+        # Área de Texto
+        frame_text = tk.Frame(frame_log_outer, bg=BG_PANEL)
+        frame_text.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+
+        self.log = tk.Text(
+            frame_text, bg=BG_PANEL, fg=WHITE,
+            insertbackground=CYAN, font=FONT_LOG,
+            bd=0, wrap="word", state="disabled",
+            selectbackground=BLUE_NEON, selectforeground=WHITE,
+            height=6, padx=8, pady=6,
+        )
+        scroll = tk.Scrollbar(
+            frame_text, command=self.log.yview, bg=BG_CARD,
+            troughcolor=BG_PANEL, bd=0, relief="flat", width=10,
+        )
+        self.log.configure(yscrollcommand=scroll.set)
+
+        scroll.pack(side="right", fill="y")
+        self.log.pack(fill="both", expand=True)
+
+        # Tags de Cores para mensagens
+        self.log.tag_configure("voz",     foreground=CYAN_GLOW, font=("Consolas", 10, "bold"))
+        self.log.tag_configure("jarvis",  foreground=GOLD,      font=("Consolas", 10, "bold"))
+        self.log.tag_configure("sistema", foreground=GRAY)
+        self.log.tag_configure("erro",    foreground=RED,       font=("Consolas", 10, "bold"))
+        self.log.tag_configure("texto",   foreground=GREEN,     font=("Consolas", 10, "bold"))
+        self.log.tag_configure("ts",      foreground=CYAN_DIM)
 
     # ── Controle do Modo Muto (Silenciado) ───────────────────────────────────
 
@@ -301,7 +300,7 @@ class InterfaceJarvis:
             self.registrar_log("[sistema] Modo SILENCIADO ativado (Microfone desativado).", "erro")
         else:
             self.btn_mutar.configure(bg=BORDER_DIM, fg=GRAY)
-            self.btn_desmutar.configure(bg="#005533", fg=WHITE)
+            self.btn_desmutar.configure(bg="#006644", fg=WHITE)
             self.atualizar_status("OUVINDO...")
             self.registrar_log("[sistema] Microfone REATIVADO (Ouvindo).", "sistema")
 
@@ -315,10 +314,10 @@ class InterfaceJarvis:
             self.root, bg=BG_CARD, bd=1,
             highlightbackground=BORDER_DIM, highlightthickness=1,
         )
-        self.frame_entrada_outer.pack(fill="x", padx=16, pady=(4, 16))
+        self.frame_entrada_outer.pack(fill="x", padx=16, pady=(2, 10))
 
         inner = tk.Frame(self.frame_entrada_outer, bg=BG_CARD)
-        inner.pack(fill="x", padx=8, pady=6)
+        inner.pack(fill="x", padx=8, pady=4)
 
         tk.Label(
             inner, text="▶",
@@ -334,7 +333,7 @@ class InterfaceJarvis:
             insertbackground=CYAN, font=FONT_INPUT,
             relief="flat", bd=0,
         )
-        self.entrada.pack(fill="x", expand=True, ipady=6, padx=8)
+        self.entrada.pack(fill="x", expand=True, ipady=5, padx=8)
         self.entrada.bind("<Return>", self._enviar_manual)
         self.entrada.insert(0, "Digite um comando ou fale com o JARVIS...")
         self.entrada.configure(fg=GRAY)
@@ -345,7 +344,7 @@ class InterfaceJarvis:
             inner, text="ENVIAR",
             command=self._enviar_manual,
             bg=BLUE_NEON, fg=WHITE, font=FONT_BTN,
-            relief="flat", bd=0, padx=16, pady=6, cursor="hand2",
+            relief="flat", bd=0, padx=16, pady=5, cursor="hand2",
             activebackground=CYAN, activeforeground=BG,
         )
         self.btn_enviar.pack(side="right", padx=(6, 4))
@@ -397,9 +396,9 @@ class InterfaceJarvis:
     def _desenhar_cena(self):
         self.canvas.delete("all")
         w = max(self.canvas.winfo_width(), 400)
-        h = max(self.canvas.winfo_height(), 300)
+        h = max(self.canvas.winfo_height(), 260)
         cx = w // 2
-        cy = h // 2
+        cy = h // 2 + 10
 
         self._desenhar_grade(w, h)
         self._desenhar_aura_glow(cx, cy)
@@ -426,15 +425,15 @@ class InterfaceJarvis:
         
         # Camadas concêntricas para simular gradiente de luz suave
         glow_colors = [
-            ("#040f24", 210),
-            ("#071a38", 180),
-            ("#0a254c", 150),
-            ("#0c3266", 120),
+            ("#040f24", 170),
+            ("#071a38", 140),
+            ("#0a254c", 110),
+            ("#0c3266", 80),
         ] if not is_active else [
-            ("#051c2e", 230 + int(20 * self._pulso)),
-            ("#0a334f", 190 + int(15 * self._pulso)),
-            ("#0e4b73", 150 + int(10 * self._pulso)),
-            ("#12669c", 110 + int(5 * self._pulso)),
+            ("#051c2e", 180 + int(15 * self._pulso)),
+            ("#0a334f", 145 + int(10 * self._pulso)),
+            ("#0e4b73", 115 + int(8 * self._pulso)),
+            ("#12669c", 85 + int(4 * self._pulso)),
         ]
 
         for color, radius in glow_colors:
@@ -450,25 +449,25 @@ class InterfaceJarvis:
 
         # Pulso Externo quando ouvindo/processando
         if "OUVINDO" in self._status:
-            r_pulso = 175 + int(18 * math.sin(self._pulso * math.pi))
+            r_pulso = 135 + int(12 * math.sin(self._pulso * math.pi))
             self.canvas.create_oval(
                 cx - r_pulso, cy - r_pulso,
                 cx + r_pulso, cy + r_pulso,
                 outline=BLUE_NEON, width=2,
             )
             self.canvas.create_oval(
-                cx - r_pulso + 8, cy - r_pulso + 8,
-                cx + r_pulso - 8, cy + r_pulso - 8,
+                cx - r_pulso + 6, cy - r_pulso + 6,
+                cx + r_pulso - 6, cy + r_pulso - 6,
                 outline=CYAN_GLOW, width=1,
             )
 
         # Anéis Giratórios Interiores
         aneis = [
-            (160, 2, CYAN_DIM,    0.40, 290),
-            (140, 3, status_cor, -0.70, 310),
-            (118, 2, BLUE_NEON,   1.10, 270),
-            (96,  3, status_cor, -1.40, 320),
-            (76,  2, CYAN_GLOW,   1.80, 280),
+            (125, 2, CYAN_DIM,    0.40, 290),
+            (108, 3, status_cor, -0.70, 310),
+            (90,  2, BLUE_NEON,   1.10, 270),
+            (72,  3, status_cor, -1.40, 320),
+            (56,  2, CYAN_GLOW,   1.80, 280),
         ]
         for raio, larg, cor, vel, extent in aneis:
             inicio = (self._angulo * vel) % 360
@@ -480,7 +479,7 @@ class InterfaceJarvis:
 
         # Núcleo Hexagonal Suave (calculado trigonometricamente)
         hex_points = []
-        r_hex = 52
+        r_hex = 40
         ang_off = math.radians(self._angulo * 0.3)
         for i in range(6):
             a = ang_off + i * (math.pi / 3)
@@ -493,14 +492,14 @@ class InterfaceJarvis:
         )
 
         # Círculo Núcleo Interior
-        for r, cor in [(36, "#0a293c"), (26, "#0d3c59"), (16, CYAN_GLOW)]:
+        for r, cor in [(28, "#0a293c"), (20, "#0d3c59"), (12, CYAN_GLOW)]:
             self.canvas.create_oval(
                 cx - r, cy - r, cx + r, cy + r,
                 fill=cor, outline="", width=0,
             )
 
         # Brilho Central do Core
-        r_core = 10 + int(3 * math.sin(self._pulso * math.pi))
+        r_core = 8 + int(2 * math.sin(self._pulso * math.pi))
         self.canvas.create_oval(
             cx - r_core, cy - r_core, cx + r_core, cy + r_core,
             fill=WHITE, outline=CYAN_GLOW, width=2,
@@ -509,17 +508,17 @@ class InterfaceJarvis:
         # Partículas Orbitais Suaves
         for i in range(4):
             a_orb = math.radians(self._angulo * 0.8 + i * 90)
-            r_orb = 128
+            r_orb = 98
             ox = cx + r_orb * math.cos(a_orb)
             oy = cy + r_orb * math.sin(a_orb)
-            self.canvas.create_oval(ox-4, oy-4, ox+4, oy+4, fill=CYAN_GLOW, outline=BLUE_NEON)
+            self.canvas.create_oval(ox-3, oy-3, ox+3, oy+3, fill=CYAN_GLOW, outline=BLUE_NEON)
 
     # Título do HUD com Placa Escura de Alto Contraste (Legibilidade Máxima)
     def _desenhar_titulo(self, cx, cy):
         # Placa dark glass no topo do canvas para legibilidade e contraste perfeitos
-        pw, ph = 320, 48
-        px1, py1 = cx - pw // 2, 12
-        px2, py2 = cx + pw // 2, 12 + ph
+        pw, ph = 320, 44
+        px1, py1 = cx - pw // 2, 8
+        px2, py2 = cx + pw // 2, 8 + ph
 
         # Fundo escuro Obsidian com borda Neon Blue
         self.canvas.create_rectangle(
@@ -534,27 +533,27 @@ class InterfaceJarvis:
 
         # Sombras e Texto com alto contraste (Preto + Ciano Nítido)
         self.canvas.create_text(
-            cx + 1, 29, text="J.A.R.V.I.S",
-            fill="#000000", font=("Segoe UI", 16, "bold"),
+            cx + 1, 24, text="J.A.R.V.I.S",
+            fill="#000000", font=("Segoe UI", 15, "bold"),
         )
         self.canvas.create_text(
-            cx, 28, text="J.A.R.V.I.S",
-            fill=CYAN_GLOW, font=("Segoe UI", 16, "bold"),
+            cx, 23, text="J.A.R.V.I.S",
+            fill=CYAN_GLOW, font=("Segoe UI", 15, "bold"),
         )
         self.canvas.create_line(
-            cx - 60, 41, cx + 60, 41,
+            cx - 60, 34, cx + 60, 34,
             fill=CYAN_DIM, width=1,
         )
         self.canvas.create_text(
-            cx, 49, text="INTELLIGENT SYSTEM ARCHITECTURE v4.5",
+            cx, 42, text="INTELLIGENT SYSTEM ARCHITECTURE v4.5",
             fill=WHITE, font=("Consolas", 7, "bold"),
         )
 
     # Molduras e Telemetria Sci-Fi
     def _desenhar_telemetria_hud(self, cx, cy, w, h):
         # Cantos Decorativos HD
-        pad = 12
-        length = 24
+        pad = 10
+        length = 20
         cantos = [
             (pad, pad, pad + length, pad), (pad, pad, pad, pad + length),
             (w - pad - length, pad, w - pad, pad), (w - pad, pad, w - pad, pad + length),
@@ -565,7 +564,7 @@ class InterfaceJarvis:
             self.canvas.create_line(x1, y1, x2, y2, fill=CYAN_DIM, width=2)
 
         # Painéis de Telemetria Inferiores
-        y_base = max(h - 50, 160)
+        y_base = max(h - 45, 140)
         t_left = [
             f"PWR CORE : {92 + int(8 * math.sin(self._pulso * math.pi)):3d}%",
             f"LATENCY  : {10 + int(5 * math.sin(self._pulso * math.pi)):3d} ms",
@@ -573,7 +572,7 @@ class InterfaceJarvis:
         ]
         for idx, texto in enumerate(t_left):
             self.canvas.create_text(
-                24, y_base + idx * 14, text=texto,
+                20, y_base + idx * 13, text=texto,
                 fill=CYAN_DIM, font=("Consolas", 8), anchor="w",
             )
 
@@ -584,7 +583,7 @@ class InterfaceJarvis:
         ]
         for idx, texto in enumerate(t_right):
             self.canvas.create_text(
-                w - 24, y_base + idx * 14, text=texto,
+                w - 20, y_base + idx * 13, text=texto,
                 fill=CYAN_DIM, font=("Consolas", 8), anchor="e",
             )
 
