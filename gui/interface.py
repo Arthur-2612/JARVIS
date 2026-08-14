@@ -1,10 +1,11 @@
 """
-Interface HUD Premium do JARVIS v4 - Ultra High-Definition & Smooth UI.
+Interface HUD Premium do JARVIS v4.5 - Ultra High-Definition & Smooth UI.
 
 Design sci-fi modernizado de alta fidelidade com:
 - Suporte a High-DPI Awareness (sem pixels borrados/esticados no Windows).
+- Placa de título com alto contraste e proteção visual (100% legível).
+- Modo SILENCIADO com dois botões distintos (Microfone Cortado 🎙️❌ e Normal 🎙️).
 - Arc-Reactor HD com renderização vetorial suave, aura de brilho e geometria hexagonal.
-- Anéis de energia com rotação dinâmica e partículas orbitais.
 - Efeitos visuais de hover interativos e alteração de foco.
 - Suporte a TELA CHEIA (Fullscreen F11 ou botão ⛶ TELA CHEIA).
 - Log de conversa estilizado com tags coloridas por falante.
@@ -72,11 +73,12 @@ WIN_W, WIN_H = 760, 880
 
 
 class InterfaceJarvis:
-    def __init__(self, on_comando_manual, on_fechar, on_detectar_microfones=None, on_salvar_microfone=None):
+    def __init__(self, on_comando_manual, on_fechar, on_detectar_microfones=None, on_salvar_microfone=None, on_alternar_mudo=None):
         self.on_comando_manual       = on_comando_manual
         self.on_fechar               = on_fechar
         self.on_detectar_microfones  = on_detectar_microfones
         self.on_salvar_microfone     = on_salvar_microfone
+        self.on_alternar_mudo        = on_alternar_mudo
 
         self._fila   = queue.Queue()
         self._angulo = 0.0
@@ -85,6 +87,7 @@ class InterfaceJarvis:
         self._pulso_dir = 1
         self._grade_offset = 0.0
         self._eh_fullscreen = False
+        self._mutado = False
 
         self._microfone_atual = "Detectando..."
         self._mics_disponiveis: list[tuple[int, str]] = []
@@ -142,7 +145,7 @@ class InterfaceJarvis:
 
         # Versão do Sistema à direita
         lbl_sys = tk.Label(
-            inner, text="SYSTEM ONLINE v4.2  ◈  CORE ACTIVE",
+            inner, text="SYSTEM ONLINE v4.5  ◈  CORE ACTIVE",
             font=FONT_SUBTITLE, fg=GRAY, bg=BG_CARD,
         )
         lbl_sys.pack(side="right", padx=6)
@@ -205,7 +208,7 @@ class InterfaceJarvis:
         self.log.tag_configure("texto",   foreground=GREEN,     font=("Consolas", 10, "bold"))
         self.log.tag_configure("ts",      foreground=CYAN_DIM)
 
-    # ── Painel do Microfone & Controles ──────────────────────────────────────
+    # ── Painel do Microfone & Controles de Mudo ──────────────────────────────────
 
     def _construir_mic_panel(self):
         self.frame_mic = tk.Frame(
@@ -214,44 +217,96 @@ class InterfaceJarvis:
         )
         self.frame_mic.pack(fill="x", padx=16, pady=4)
 
-        inner = tk.Frame(self.frame_mic, bg=BG_CARD)
-        inner.pack(fill="x", padx=10, pady=6)
+        # ── Linha 1: Dispositivo Atual e utilitários ──
+        row1 = tk.Frame(self.frame_mic, bg=BG_CARD)
+        row1.pack(fill="x", padx=10, pady=(6, 2))
 
         tk.Label(
-            inner, text="🎙 DISPOSITIVO:",
+            row1, text="🎙 DISPOSITIVO:",
             font=FONT_SMALL, fg=CYAN_DIM, bg=BG_CARD,
-        ).pack(side="left", padx=(4, 6))
+        ).pack(side="left", padx=(4, 4))
 
         self.label_mic_nome = tk.Label(
-            inner, text="Detectando...",
+            row1, text="Detectando...",
             font=FONT_MIC, fg=WHITE, bg=BG_CARD, anchor="w",
         )
-        self.label_mic_nome.pack(side="left", fill="x", expand=True, padx=4)
+        self.label_mic_nome.pack(side="left", padx=2)
 
         # Botão de Tela Cheia
         btn_fullscreen = tk.Button(
-            inner, text="⛶ TELA CHEIA (F11)",
+            row1, text="⛶ TELA CHEIA",
             command=self.alternar_tela_cheia,
             bg=BORDER_DIM, fg=CYAN, font=FONT_BTN,
-            relief="flat", bd=0, padx=10, pady=4, cursor="hand2",
+            relief="flat", bd=0, padx=8, pady=3, cursor="hand2",
             activebackground=BLUE_NEON, activeforeground=WHITE,
         )
-        btn_fullscreen.pack(side="right", padx=(4, 0))
+        btn_fullscreen.pack(side="right", padx=(2, 0))
 
         # Botão de Trocar Microfone
         btn_detectar = tk.Button(
-            inner, text="⟳ DETECTAR MIC",
+            row1, text="⟳ DETECTAR MIC",
             command=self._abrir_dialogo_microfone,
             bg=BORDER_DIM, fg=CYAN, font=FONT_BTN,
-            relief="flat", bd=0, padx=10, pady=4, cursor="hand2",
+            relief="flat", bd=0, padx=8, pady=3, cursor="hand2",
             activebackground=BLUE_NEON, activeforeground=WHITE,
         )
-        btn_detectar.pack(side="right", padx=4)
+        btn_detectar.pack(side="right", padx=2)
+
+        # ── Linha 2: Barra Destaque de MUTE / UNMUTE ──
+        row2 = tk.Frame(self.frame_mic, bg=BG_PANEL, bd=1, highlightbackground=BORDER_DIM, highlightthickness=1)
+        row2.pack(fill="x", padx=10, pady=(4, 8))
+
+        inner_row2 = tk.Frame(row2, bg=BG_PANEL)
+        inner_row2.pack(fill="x", padx=8, pady=4)
+
+        tk.Label(
+            inner_row2, text="MODO DE ESCUTA:",
+            font=FONT_SMALL, fg=CYAN_GLOW, bg=BG_PANEL,
+        ).pack(side="left", padx=(4, 10))
+
+        # Botão SILENCIAR (Microfone Cortado 🎙️❌)
+        self.btn_mutar = tk.Button(
+            inner_row2, text="🎙️❌ SILENCIAR (MUTE)",
+            command=lambda: self.definir_mudo(True),
+            bg=BORDER_DIM, fg=GRAY, font=("Segoe UI", 9, "bold"),
+            relief="flat", bd=0, padx=14, pady=5, cursor="hand2",
+            activebackground=RED, activeforeground=WHITE,
+        )
+        self.btn_mutar.pack(side="left", padx=4)
+
+        # Botão DESMUTAR (Microfone Normal 🎙️)
+        self.btn_desmutar = tk.Button(
+            inner_row2, text="🎙️ DESMUTAR (OUVINDO)",
+            command=lambda: self.definir_mudo(False),
+            bg="#006644", fg=WHITE, font=("Segoe UI", 9, "bold"),
+            relief="flat", bd=0, padx=14, pady=5, cursor="hand2",
+            activebackground=GREEN, activeforeground=BG,
+        )
+        self.btn_desmutar.pack(side="left", padx=4)
 
         # Efeitos de Hover nos botões
         for b in (btn_fullscreen, btn_detectar):
             b.bind("<Enter>", lambda e, btn=b: btn.configure(bg="#18325a"))
             b.bind("<Leave>", lambda e, btn=b: btn.configure(bg=BORDER_DIM))
+
+
+    # ── Controle do Modo Muto (Silenciado) ───────────────────────────────────
+
+    def definir_mudo(self, mutado: bool):
+        self._mutado = mutado
+        if mutado:
+            self.btn_mutar.configure(bg=RED, fg=WHITE)
+            self.btn_desmutar.configure(bg=BORDER_DIM, fg=GRAY)
+            self.atualizar_status("SILENCIADO")
+            self.registrar_log("[sistema] Modo SILENCIADO ativado (Microfone desativado).", "erro")
+        else:
+            self.btn_mutar.configure(bg=BORDER_DIM, fg=GRAY)
+            self.btn_desmutar.configure(bg="#005533", fg=WHITE)
+            self.atualizar_status("OUVINDO...")
+            self.registrar_log("[sistema] Microfone REATIVADO (Ouvindo).", "sistema")
+
+        if self.on_alternar_mudo:
+            self.on_alternar_mudo(self._mutado)
 
     # ── Campo de Entrada de Texto ────────────────────────────────────────────
 
@@ -327,6 +382,8 @@ class InterfaceJarvis:
 
     def _cor_status(self):
         s = self._status
+        if "SILENCIADO" in s or "MUTADO" in s:
+            return RED
         if "OUVINDO" in s:
             return CYAN
         if "PROCESSANDO" in s:
@@ -457,19 +514,40 @@ class InterfaceJarvis:
             oy = cy + r_orb * math.sin(a_orb)
             self.canvas.create_oval(ox-4, oy-4, ox+4, oy+4, fill=CYAN_GLOW, outline=BLUE_NEON)
 
-    # Título do HUD com tipografia nítida
+    # Título do HUD com Placa Escura de Alto Contraste (Legibilidade Máxima)
     def _desenhar_titulo(self, cx, cy):
+        # Placa dark glass no topo do canvas para legibilidade e contraste perfeitos
+        pw, ph = 320, 48
+        px1, py1 = cx - pw // 2, 12
+        px2, py2 = cx + pw // 2, 12 + ph
+
+        # Fundo escuro Obsidian com borda Neon Blue
+        self.canvas.create_rectangle(
+            px1, py1, px2, py2,
+            fill="#030818", outline=BLUE_NEON, width=1.5,
+        )
+        # Cantos decorativos da placa de título
+        self.canvas.create_line(px1, py1, px1 + 12, py1, fill=CYAN_GLOW, width=2)
+        self.canvas.create_line(px1, py1, px1, py1 + 12, fill=CYAN_GLOW, width=2)
+        self.canvas.create_line(px2 - 12, py2, px2, py2, fill=CYAN_GLOW, width=2)
+        self.canvas.create_line(px2, py2 - 12, px2, py2, fill=CYAN_GLOW, width=2)
+
+        # Sombras e Texto com alto contraste (Preto + Ciano Nítido)
         self.canvas.create_text(
-            cx, cy - 2, text="J.A.R.V.I.S",
-            fill=WHITE, font=("Segoe UI", 20, "bold"),
+            cx + 1, 29, text="J.A.R.V.I.S",
+            fill="#000000", font=("Segoe UI", 16, "bold"),
+        )
+        self.canvas.create_text(
+            cx, 28, text="J.A.R.V.I.S",
+            fill=CYAN_GLOW, font=("Segoe UI", 16, "bold"),
         )
         self.canvas.create_line(
-            cx - 60, cy + 16, cx + 60, cy + 16,
-            fill=CYAN, width=2,
+            cx - 60, 41, cx + 60, 41,
+            fill=CYAN_DIM, width=1,
         )
         self.canvas.create_text(
-            cx, cy + 28, text="INTELLIGENT SYSTEM ARCHITECTURE",
-            fill=CYAN_DIM, font=("Consolas", 8, "bold"),
+            cx, 49, text="INTELLIGENT SYSTEM ARCHITECTURE v4.5",
+            fill=WHITE, font=("Consolas", 7, "bold"),
         )
 
     # Molduras e Telemetria Sci-Fi
@@ -491,7 +569,7 @@ class InterfaceJarvis:
         t_left = [
             f"PWR CORE : {92 + int(8 * math.sin(self._pulso * math.pi)):3d}%",
             f"LATENCY  : {10 + int(5 * math.sin(self._pulso * math.pi)):3d} ms",
-            f"VOICE IN : ACTIVE",
+            f"VOICE IN : {'MUTED' if self._mutado else 'ACTIVE'}",
         ]
         for idx, texto in enumerate(t_left):
             self.canvas.create_text(
@@ -533,6 +611,8 @@ class InterfaceJarvis:
         self.label_status.configure(text=self._status)
 
         cores_dot = {
+            "SILENCIADO":   RED,
+            "MUTADO":       RED,
             "OUVINDO":      GREEN,
             "PROCESSANDO":  ORANGE,
             "PAUSADO":      RED,

@@ -2,12 +2,15 @@
 Cérebro do JARVIS v5 — assistente virtual inteligente completo.
 
 - Responde curiosidades gerais e perguntas sobre quase tudo (Wikipédia API + banco de dados).
+- Controle avançado de hardware: volume por %, brilho, pausar/despausar mídia, tamanho/resolução de tela.
+- Análise e diagnóstico do computador em tempo real.
 - Suporte a desligamento instantâneo por qualquer palavra relacionada ('desligar', 'desliga', 'encerrar', 'tchau', 'fechar', etc.).
 - Suporte a todos os apps e sites do config.json.
 - Fallback inteligente com pesquisa automática quando necessário.
 """
 
 import random
+import re
 import unicodedata
 from core import acoes, conhecimento
 
@@ -34,8 +37,33 @@ PALAVRAS_SAIR     = [
     "fechar o jarvis", "desliga o jarvis", "fim", "desligando"
 ]
 
-PALAVRAS_PAUSAR   = ["pausar", "pare de ouvir", "descansar", "fique quieto",
-                     "para de ouvir", "silencio", "chega", "pausa"]
+PALAVRAS_PAUSAR   = ["pausar jarvis", "pare de ouvir", "descansar", "fique quieto",
+                     "para de ouvir", "silencio", "chega", "pausa o jarvis"]
+
+PALAVRAS_MIDIA    = [
+    "pausar video", "despausar video", "pausar o video", "despausar o video",
+    "pausa o video", "tocar video", "play no video", "da play", "dar play",
+    "pausar musica", "despausar musica", "pausar midia", "despausar midia",
+    "pausar o filme", "despausar o filme", "pausa o filme", "tocar midia",
+    "pausa o som", "despausa o som"
+]
+
+PALAVRAS_VOLUME   = ["volume", "som", "audio"]
+
+PALAVRAS_BRILHO   = ["brilho", "luminosidade", "luz da tela"]
+
+PALAVRAS_TELA     = [
+    "tamanho da minha tela", "tamanho da tela", "resolucao",
+    "resolucao da tela", "configuracoes de tela", "ajustar tela"
+]
+
+PALAVRAS_ANALISE  = [
+    "analise todas", "analise o computador", "analise meu computador",
+    "analisar computador", "analisar o computador", "analise as funcionalidades",
+    "diagnostico do sistema", "diagnostico do computador", "status do pc",
+    "status do computador", "como esta meu computador", "como ta meu computador",
+    "como esta meu pc", "analise o pc", "verificar computador", "analisar sistema"
+]
 
 PALAVRAS_ABRIR    = ["abrir", "abra", "abre", "iniciar", "inicia",
                      "lancar", "lanca", "abrir aba", "abre aba", "entrar", "entra",
@@ -119,37 +147,76 @@ def processar_comando(texto: str, config: dict) -> str:
     if _contem(norm, PALAVRAS_PAUSAR):
         return "__PAUSAR__"
 
-    # ── 3. Curiosidades ───────────────────────────────────────────────────
+    # ── 3. Análise do Computador / Diagnóstico ────────────────────────────
+    if _contem(norm, PALAVRAS_ANALISE) or ("analis" in norm and any(k in norm for k in ["computador", "pc", "funcionalidade", "sistema"])):
+        return acoes.analisar_sistema()
+
+    # ── 4. Controle de Mídia (Pausar / Despausar Vídeo) ────────────────────
+    if _contem(norm, PALAVRAS_MIDIA) or ("video" in norm and any(k in norm for k in ["pausar", "despausar", "tocar", "play", "pausa"])):
+        return acoes.alternar_midia()
+
+    # ── 5. Controle de Volume Master ──────────────────────────────────────
+    if _contem(norm, PALAVRAS_VOLUME) or "abaixar volume" in norm or "aumentar volume" in norm:
+        numeros = re.findall(r'\d+', texto)
+        if numeros:
+            val = int(numeros[0])
+            return acoes.definir_volume(val)
+        if any(k in norm for k in ["aumentar", "subir", "mais"]):
+            return acoes.alterar_volume_relativo(15)
+        if any(k in norm for k in ["abaixar", "diminuir", "menos"]):
+            return acoes.alterar_volume_relativo(-15)
+        if any(k in norm for k in ["mudo", "mutar", "silenciar"]):
+            return acoes.definir_volume(0)
+
+    # ── 6. Controle de Brilho da Tela ─────────────────────────────────────
+    if _contem(norm, PALAVRAS_BRILHO):
+        numeros = re.findall(r'\d+', texto)
+        if numeros:
+            val = int(numeros[0])
+            return acoes.ajustar_brilho(val)
+        if any(k in norm for k in ["aumentar", "mais"]):
+            return acoes.ajustar_brilho(80)
+        if any(k in norm for k in ["diminuir", "abaixar", "menos"]):
+            return acoes.ajustar_brilho(30)
+        if "maximo" in norm:
+            return acoes.ajustar_brilho(100)
+        return acoes.ajustar_brilho(70)
+
+    # ── 7. Configurações de Exibição / Resolução de Tela ───────────────────
+    if _contem(norm, PALAVRAS_TELA):
+        return acoes.abrir_configuracoes_tela()
+
+    # ── 8. Curiosidades ───────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_CURIOSIDADE):
         return conhecimento.obter_curiosidade()
 
-    # ── 4. Piadas ─────────────────────────────────────────────────────────
+    # ── 9. Piadas ─────────────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_PIADA):
         return random.choice(PIADAS)
 
-    # ── 5. Horas e Data ───────────────────────────────────────────────────
+    # ── 10. Horas e Data ──────────────────────────────────────────────────
     if _contem(norm, PALAVRAS_HORAS):
         return acoes.dizer_horas()
 
     if _contem(norm, PALAVRAS_DATA):
         return acoes.dizer_data()
 
-    # ── 6. Notícias e Clima ───────────────────────────────────────────────
+    # ── 11. Notícias e Clima ──────────────────────────────────────────────
     if _contem(norm, PALAVRAS_NOTICIAS):
         return acoes.abrir_noticias()
 
     if _contem(norm, PALAVRAS_CLIMA):
         return acoes.abrir_clima()
 
-    # ── 7. Saudações ──────────────────────────────────────────────────────
+    # ── 12. Saudações ─────────────────────────────────────────────────────
     if len(palavras) <= 3 and _contem(norm, PALAVRAS_SAUDACAO):
         return random.choice(SAUDACOES_RESPOSTA)
 
-    # ── 8. YouTube ────────────────────────────────────────────────────────
+    # ── 13. YouTube ───────────────────────────────────────────────────────
     if "youtube" in norm:
         return acoes.abrir_youtube(texto)
 
-    # ── 9. Pesquisa explícita ─────────────────────────────────────────────
+    # ── 14. Pesquisa explícita ────────────────────────────────────────────
     if _comeca_com(norm, PALAVRAS_PESQUISA) or "no google" in norm or "no bing" in norm:
         termo = norm
         for p in sorted(PALAVRAS_PESQUISA, key=len, reverse=True):
@@ -165,7 +232,7 @@ def processar_comando(texto: str, config: dict) -> str:
         if termo:
             return acoes.pesquisar_google(termo)
 
-    # ── 10. Aplicativos e sites do config.json ────────────────────────────
+    # ── 15. Aplicativos e sites do config.json ────────────────────────────
     apps = config.get("apps", {})
     nome_app = acoes.extrair_nome_app(norm, apps)
     if not nome_app:
@@ -177,7 +244,7 @@ def processar_comando(texto: str, config: dict) -> str:
     if _contem(norm, PALAVRAS_ABRIR):
         return "Cara, não achei esse app na minha lista. Dá pra adicionar no config.json!"
 
-    # ── 11. Perguntas gerais e conhecimentos (Wikipédia / Inteligência) ────
+    # ── 16. Perguntas gerais e conhecimentos (Wikipédia / Inteligência) ───
     resposta_conhecimento = conhecimento.responder_pergunta(texto)
     if resposta_conhecimento:
         return resposta_conhecimento

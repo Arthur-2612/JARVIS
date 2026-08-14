@@ -14,6 +14,9 @@ import unicodedata
 import urllib.parse
 import webbrowser
 
+from core import sistema
+
+
 # Palavras que NUNCA devem virar parte de um termo de busca
 PALAVRAS_RUIDO = {
     # ativação
@@ -209,3 +212,32 @@ def abrir_noticias() -> str:
 def abrir_clima() -> str:
     webbrowser.open("https://weather.com/pt-BR/tempo/hoje")
     return "Bora ver como tá o tempo lá fora!"
+
+
+# ---------------------------------------------------------------------------
+# Controle de Hardware e Sistema Operacional
+# ---------------------------------------------------------------------------
+
+def definir_volume(nivel: int) -> str:
+    return sistema.definir_volume(nivel)
+
+
+def alterar_volume_relativo(delta: int) -> str:
+    return sistema.alterar_volume_relativo(delta)
+
+
+def ajustar_brilho(nivel: int) -> str:
+    return sistema.definir_brilho(nivel)
+
+
+def alternar_midia() -> str:
+    return sistema.alternar_midia_play_pause()
+
+
+def abrir_configuracoes_tela() -> str:
+    return sistema.abrir_configuracoes_tela()
+
+
+def analisar_sistema() -> str:
+    return sistema.analisar_computador()
+

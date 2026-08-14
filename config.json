@@ -107,6 +107,8 @@
     "calculadora": { "type": "command", "value": "calc" },
     "calc": { "type": "command", "value": "calc" },
     "explorador de arquivos": { "type": "command", "value": "explorer" },
+    "gerenciador de arquivos": { "type": "command", "value": "explorer" },
+    "gerenciador de arquivo": { "type": "command", "value": "explorer" },
     "explorer": { "type": "command", "value": "explorer" },
     "meus arquivos": { "type": "command", "value": "explorer" },
     "pastas": { "type": "command", "value": "explorer" },

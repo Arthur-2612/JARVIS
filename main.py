@@ -47,7 +47,9 @@ class Jarvis:
             on_fechar              = self.encerrar,
             on_detectar_microfones = self._obter_microfones,
             on_salvar_microfone    = self._salvar_microfone,
+            on_alternar_mudo       = self.alternar_mudo,
         )
+
 
         # Detector de palmas (opcional)
         self.detector_palmas = None
@@ -99,6 +101,12 @@ class Jarvis:
             "sistema",
         )
         self.interface.atualizar_status(estado)
+
+    def alternar_mudo(self, mutado: bool):
+        self.pausado = mutado
+        estado = "SILENCIADO" if mutado else "OUVINDO..."
+        self.interface.atualizar_status(estado)
+
 
     # ── Loop principal de voz (modo contínuo) ────────────────────────────────
 
