@@ -37,7 +37,7 @@ def normalizar_texto(texto: str) -> str:
 
 
 def _tem_palavra(texto: str, palavras: list[str]) -> bool:
-    return any(p in texto for p in palavras)
+    return any(re.search(rf"\b{re.escape(p)}\b", texto) for p in palavras)
 
 
 def _extrair_termo_pesquisa(texto: str) -> str:
