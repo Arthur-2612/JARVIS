@@ -95,5 +95,3 @@ def dizer_horas() -> str:
     agora = datetime.datetime.now().strftime("%H:%M")
     return f"Agora são {agora}, senhor."
 
-
-dizer_horas = dizer_horas
