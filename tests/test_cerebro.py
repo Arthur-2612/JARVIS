@@ -1,4 +1,5 @@
 from core import cerebro
+from core.acoes import abrir_item
 
 
 def test_normaliza_comando_remove_jarvis_e_pontuacao():
@@ -11,6 +12,10 @@ def test_normaliza_comando_remove_acentos():
 
 def test_palavra_chave_nao_aceita_trecho_de_palavra():
     assert not cerebro._tem_palavra("pesquisador", ["pesquisar"])
+
+
+def test_abrir_item_rejeita_configuracao_invalida():
+    assert abrir_item(None) is False
 
 
 def test_processar_comando_abrir_app_com_variacao_natural():
