@@ -50,7 +50,7 @@ def abrir_app(nome: str, apps_config: dict) -> str:
     return f"Não consegui abrir {nome}. Verifique o caminho no config.json."
 
 
-def extrair_nome_app(texto: str, apps_config: dict):
+def extrair_nome_app(texto: str, apps_config: dict) -> str | None:
     """Encontra qual app configurado foi mencionado no texto reconhecido."""
     texto_normalizado = _normalizar_texto(texto)
     for nome_app in apps_config:
