@@ -13,7 +13,9 @@ _reconhecedor.pause_threshold = 0.8
 _reconhecedor.dynamic_energy_threshold = True
 
 
-def ouvir_comando(idioma: str = "pt-BR", timeout: int = 6, phrase_time_limit: int = 7):
+def ouvir_comando(
+    idioma: str = "pt-BR", timeout: float = 6, phrase_time_limit: float = 7
+) -> str | None:
     """
     Escuta o microfone por um comando e retorna o texto reconhecido
     (em minúsculas) ou None se não ouviu/entendeu nada.
