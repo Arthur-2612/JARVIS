@@ -9,6 +9,10 @@ def test_normaliza_comando_remove_acentos():
     assert cerebro.normalizar_texto("Que horas são?") == "que horas sao"
 
 
+def test_palavra_chave_nao_aceita_trecho_de_palavra():
+    assert not cerebro._tem_palavra("pesquisador", ["pesquisar"])
+
+
 def test_processar_comando_abrir_app_com_variacao_natural():
     config = {
         "apps": {
