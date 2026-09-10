@@ -7,12 +7,18 @@ import datetime
 import re
 import shutil
 import subprocess
+import unicodedata
 import urllib.parse
 import webbrowser
 
 
 def _normalizar_texto(texto: str) -> str:
-    return re.sub(r"[^a-z0-9\s]", " ", texto.lower()).strip()
+    texto = "".join(
+        caractere
+        for caractere in unicodedata.normalize("NFD", texto.lower())
+        if unicodedata.category(caractere) != "Mn"
+    )
+    return re.sub(r"[^a-z0-9\s]", " ", texto).strip()
 
 
 def abrir_item(item: dict) -> bool:
