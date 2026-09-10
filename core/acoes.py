@@ -21,7 +21,7 @@ def _normalizar_texto(texto: str) -> str:
     return re.sub(r"[^a-z0-9\s]", " ", texto).strip()
 
 
-def abrir_item(item: dict) -> bool:
+def abrir_item(item: dict[str, str]) -> bool:
     tipo = item.get("type")
     valor = item.get("value")
     try:
