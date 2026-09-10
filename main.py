@@ -102,6 +102,8 @@ class Jarvis:
     # ---------- entrada manual (caixa de texto da interface) ----------
 
     def processar_texto_manual(self, texto: str):
+        if not texto or not texto.strip():
+            return
         threading.Thread(target=self._executar, args=(texto,), daemon=True).start()
 
     # ---------- núcleo comum de execução ----------
