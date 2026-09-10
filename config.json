@@ -1,0 +1,36 @@
+{
+  "idioma_reconhecimento": "pt-BR",
+
+  "voz": {
+    "usar_edge_tts": true,
+    "voz_edge_tts": "pt-BR-AntonioNeural",
+    "voz_edge_tts_alternativa_en": "en-GB-RyanNeural",
+    "velocidade": "+0%",
+    "tom": "-5Hz"
+  },
+
+  "comportamento": {
+    "saudacao_ao_iniciar": "Sistemas online. Bom dia, senhor. Estou pronto para ajudar.",
+    "tempo_limite_escuta_segundos": 6,
+    "tempo_limite_frase_segundos": 7,
+    "usar_palmas_como_gatilho_alternativo": true
+  },
+
+  "apps": {
+    "youtube": { "type": "url", "value": "https://www.youtube.com" },
+    "whatsapp": { "type": "url", "value": "https://web.whatsapp.com" },
+    "gmail": { "type": "url", "value": "https://mail.google.com" },
+    "google": { "type": "url", "value": "https://www.google.com" },
+
+    "chrome": { "type": "path", "value": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" },
+    "spotify": { "type": "path", "value": "C:\\Users\\Arthur Faria\\AppData\\Roaming\\Spotify\\Spotify.exe" },
+
+    "bloco de notas": { "type": "command", "value": "notepad" },
+    "calculadora": { "type": "command", "value": "calc" },
+    "explorador de arquivos": { "type": "command", "value": "explorer" },
+    "word": { "type": "command", "value": "winword" },
+    "excel": { "type": "command", "value": "excel" },
+    "vscode": { "type": "command", "value": "code" },
+    "visual studio code": { "type": "command", "value": "code" }
+  }
+}
