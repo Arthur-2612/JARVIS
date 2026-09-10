@@ -62,6 +62,7 @@ class InterfaceJarvis:
         )
         self.entrada.pack(side="left", fill="x", expand=True, ipady=6, padx=(0, 8))
         self.entrada.bind("<Return>", self._enviar_manual)
+        self.entrada.focus_set()
 
         botoes = tk.Frame(frame_entrada, bg=COR_FUNDO)
         botoes.pack(side="right")
