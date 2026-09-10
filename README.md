@@ -68,6 +68,12 @@ busca, se você disser "abrir youtube e tocar [nome]").
 python main.py
 ```
 
+Para verificar a sintaxe dos módulos sem iniciar microfone ou interface:
+
+```
+python -m compileall main.py core gui tests
+```
+
 A janela do HUD abre, ele fala a saudação e já fica ouvindo. Comandos que
 funcionam de fábrica:
 
