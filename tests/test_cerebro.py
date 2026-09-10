@@ -7,6 +7,10 @@ def test_normaliza_comando_remove_jarvis_e_pontuacao():
     assert cerebro.normalizar_texto("Jarvis, abre o Chrome!.") == "abre chrome"
 
 
+def test_normaliza_comando_remove_acentos():
+    assert cerebro.normalizar_texto("Que horas são?") == "que horas sao"
+
+
 def test_processar_comando_abrir_app_com_variacao_natural():
     config = {
         "apps": {
