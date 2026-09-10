@@ -6,6 +6,7 @@ especiais "__PAUSAR__" e "__SAIR__", que o main.py trata separadamente.
 """
 
 import re
+import unicodedata
 
 from core import acoes
 
@@ -22,6 +23,11 @@ def normalizar_texto(texto: str) -> str:
         return ""
     texto = texto.lower().strip()
     texto = texto.replace("’", "'")
+    texto = "".join(
+        caractere
+        for caractere in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(caractere) != "Mn"
+    )
     texto = re.sub(r"[^a-z0-9\s]", " ", texto)
     texto = re.sub(r"\s+", " ", texto).strip()
     for palavra in PALAVRAS_FILTRO:
