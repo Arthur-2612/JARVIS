@@ -22,6 +22,8 @@ def _normalizar_texto(texto: str) -> str:
 
 
 def abrir_item(item: dict[str, str]) -> bool:
+    if not isinstance(item, dict):
+        return False
     tipo = item.get("type")
     valor = item.get("value")
     try:
