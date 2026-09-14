@@ -5,3 +5,6 @@ pyttsx3
 playsound==1.2.2
 sounddevice
 numpy
+pyautogui
+pillow
+pyperclip
