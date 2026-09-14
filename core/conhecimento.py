@@ -40,14 +40,14 @@ CURIOSIDADES = [
 # ---------------------------------------------------------------------------
 
 RESPOSTAS_RAPIDAS = {
-    "quem criou voce": "Eu fui criado para ser o seu assistente virtual pessoal estilo JARVIS!",
-    "quem e voce": "Eu sou o JARVIS, seu assistente pessoal virtual!",
-    "qual seu nome": "Meu nome é JARVIS!",
-    "qual e a velocidade da luz": "A velocidade da luz no vácuo é de aproximadamente 300 mil quilômetros por segundo!",
-    "qual o maior planeta": "O maior planeta do Sistema Solar é Júpiter!",
-    "qual o maior oceano": "O Oceano Pacífico é o maior e mais profundo oceano da Terra!",
-    "qual a capital do brasil": "A capital do Brasil é Brasília!",
-    "o que e ia": "Inteligência Artificial é a capacidade de máquinas e sistemas computacionais simularem o raciocínio humano para aprender e resolver problemas!",
+    "quem criou voce": "Eu fui desenvolvido para ser o seu assistente de inteligência artificial pessoal, Senhor Faria.",
+    "quem e voce": "Eu sou o J.A.R.V.I.S., seu assistente virtual de inteligência artificial, Senhor Faria.",
+    "qual seu nome": "Meu nome é J.A.R.V.I.S., Senhor.",
+    "qual e a velocidade da luz": "A velocidade da luz no vácuo é de aproximadamente 300 mil quilômetros por segundo, Senhor Faria.",
+    "qual o maior planeta": "O maior planeta do nosso Sistema Solar é Júpiter, Senhor.",
+    "qual o maior oceano": "O Oceano Pacífico é o maior e mais profundo oceano do nosso planeta, Senhor Faria.",
+    "qual a capital do brasil": "A capital do Brasil é Brasília, Senhor.",
+    "o que e ia": "Inteligência Artificial é a capacidade de sistemas computacionais simularem a cognição e a resolução de problemas humanos, Senhor Faria.",
 }
 
 
@@ -59,7 +59,8 @@ def _normalizar(texto: str) -> str:
 
 def obter_curiosidade() -> str:
     """Retorna uma curiosidade aleatória do banco."""
-    return random.choice(CURIOSIDADES)
+    curiosidade = random.choice(CURIOSIDADES)
+    return f"Aqui está um fato interessante de meus arquivos, Senhor Faria: {curiosidade}"
 
 
 def buscar_resposta_wikipedia(termo: str) -> str | None:
@@ -129,6 +130,7 @@ def responder_pergunta(texto: str) -> str | None:
     if termo_busca:
         resumo = buscar_resposta_wikipedia(termo_busca)
         if resumo:
-            return f"Olha o que eu sei sobre isso: {resumo}"
+            return f"De acordo com meus registros de dados, Senhor Faria: {resumo}"
 
     return None
+
