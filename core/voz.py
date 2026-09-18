@@ -73,7 +73,8 @@ def _falar_com_edge_tts(texto: str, config_voz: dict) -> bool:
         return False
 
 
-def _falar_offline(texto: str):
+def _falar_offline(texto: str) -> None:
+    """Sintetiza voz via mecanismo offline (pyttsx3) como fallback caso Edge TTS falhe."""
     if not HAS_PYTTSX3:
         print(f"[JARVIS diria]: {texto}")
         return
