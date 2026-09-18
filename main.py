@@ -26,6 +26,7 @@ CONFIG_PATH = Path(__file__).parent / "config.json"
 
 
 def carregar_config() -> dict:
+    """Carrega as configurações do arquivo JSON de configuração do JARVIS."""
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
