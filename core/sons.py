@@ -64,7 +64,7 @@ def _gerar_wav_senoidal(filepath: str, frequencias: list, duracoes_ms: list, vol
         wf.writeframes(b''.join(frames))
 
 
-def inicializar_sons():
+def inicializar_sons() -> None:
     """Gera os arquivos WAV dos efeitos sonoros se ainda não existirem."""
     _garantir_diretorio()
     
