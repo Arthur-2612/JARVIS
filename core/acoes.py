@@ -205,6 +205,7 @@ def dizer_data() -> str:
 
 
 def abrir_noticias() -> str:
+    """Abre a página do Google Notícias no navegador padrão."""
     webbrowser.open("https://news.google.com/home?hl=pt-BR&gl=BR&ceid=BR:pt-419")
     return "Aqui estão as últimas notícias pra você ficar por dentro!"
 
