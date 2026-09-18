@@ -32,8 +32,8 @@ except ImportError:
 SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "screenshots")
 
 
-def _garantir_diretorio_screenshots():
-    if not os.path.exists(SCREENSHOT_DIR):
+def _garantir_diretorio_screenshots() -> None:
+    """Garante que a pasta assets/screenshots exista antes de salvar capturas."""
         os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 
