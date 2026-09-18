@@ -19,6 +19,7 @@ from core import acoes, conhecimento, automacao_tela, sons
 # ---------------------------------------------------------------------------
 
 def _normalizar(texto: str) -> str:
+    """Remove acentuação e converte o texto para minúsculas para correspondência de comandos."""
     nfkd = unicodedata.normalize("NFKD", texto)
     sem_acento = "".join(c for c in nfkd if not unicodedata.combining(c))
     return sem_acento.lower().strip()
