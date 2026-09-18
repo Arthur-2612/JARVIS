@@ -119,7 +119,7 @@ def definir_volume(nivel: int) -> str:
 
 
 def alterar_volume_relativo(delta: int) -> str:
-    """Aumenta ou diminui o volume relativo."""
+    """Aumenta ou diminui o volume relativo do sistema."""
     tecla = VK_VOLUME_UP if delta > 0 else VK_VOLUME_DOWN
     passos = abs(delta) // 5 or 1
     for _ in range(passos):

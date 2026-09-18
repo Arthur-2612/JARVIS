@@ -37,7 +37,7 @@ def listar_microfones() -> list[tuple[int, str]]:
         return []
 
 
-def calibrar_microfone(device_index=None, duration: float = 2.0):
+def calibrar_microfone(device_index=None, duration: float = 2.0) -> None:
     """
     Faz uma calibração única de ruído ambiente (2 s) e atualiza
     energy_threshold no reconhecedor global. Chamar uma vez na inicialização.

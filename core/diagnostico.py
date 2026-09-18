@@ -20,7 +20,7 @@ def listar_microfones() -> list[tuple[int, str]]:
         return []
 
 
-def salvar_device_index(config_path: Path, device_index: int | None):
+def salvar_device_index(config_path: Path, device_index: int | None) -> None:
     """Salva o device_index escolhido no config.json."""
     try:
         with open(config_path, "r", encoding="utf-8") as f:
