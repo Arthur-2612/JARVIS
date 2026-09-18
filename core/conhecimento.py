@@ -58,7 +58,7 @@ def _normalizar(texto: str) -> str:
 
 
 def obter_curiosidade() -> str:
-    """Retorna uma curiosidade aleatória do banco."""
+    """Retorna uma curiosidade aleatória do banco de conhecimento do JARVIS."""
     curiosidade = random.choice(CURIOSIDADES)
     return f"Aqui está um fato interessante de meus arquivos, Senhor Faria: {curiosidade}"
 
